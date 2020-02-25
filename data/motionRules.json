@@ -2,45 +2,61 @@
   "rooms": {
     "bedroom_1": {
       "title": "Bedroom",
-      "sensors": {
-        "sensor_1": "topic_1",
-        "sensor_2": "topic_2"
-      },
-      "timePeriods": {
-        "1": {
+      "sensors": [
+        "zigbee2mqtt/motionSensor1",
+        "topic_2"
+      ],
+      "lights": [
+        "bedroomLights"
+      ],
+      "timePeriods": [
+        {
           "label": "Morning",
           "start": "7",
-          "end": "10"
+          "end": "9",
+          "brightness": "1",
+          "switchOffAfterMins": 5
+        },
+        {
+          "label": "Day",
+          "start": "9",
+          "end": "20",
+          "brightness": "100",
+          "switchOffAfterMins": 5
+        },
+        {
+          "label": "Evening",
+          "start": "20",
+          "end": "22",
+          "brightness": "20",
+          "switchOffAfterMins": 5
+        },
+        {
+          "label": "Should be in bed",
+          "start": "22",
+          "end": "23",
+          "brightness": "1",
+          "switchOffAfterMins": 5
         }
-      }
+      ]
     },
-    "lounge_1": {
-      "title": "Bedroom",
-      "sensors": {
-        "sensor_1": "topic_1",
-        "sensor_2": "topic_2"
-      },
-      "timePeriods": {
-        "1": {
+    "hall_1": {
+      "title": "Hall",
+      "sensors": [
+        "zigbee2mqtt/motionSensor2"
+      ],
+      "lights": [
+        "hallLights"
+      ],
+      "timePeriods": [
+        {
           "label": "Morning",
           "start": "7",
-          "end": "10"
+          "end": "22",
+          "brightness": "100",
+          "switchOffAfterMins": 2
         }
-      }
-    },
-    "kitchen_1": {
-      "title": "Bedroom",
-      "sensors": {
-        "sensor_1": "topic_1"
-      },
-      "timePeriods": {
-        "1": {
-          "label": "Morning",
-          "start": "7",
-          "end": "10"
-        }
-      }
+      ]
     }
-  },
-  "key": "new value2"
+  }
 }

@@ -1,14 +1,23 @@
 global.__basedir = __dirname;
 
 var mqtt = require('mqtt')
-var config = require('./config.json');
-var api = require('./api/api.js');
+var config = require('../data/appConfig.json');
+var rulesConfig = require('../data/motionRules.json');
+const redis = require("redis");
+const redisClient = redis.createClient();
+// var api = require('./api/api.js');
+
+redisClient.on('ready',function() {
+ console.log("Redis is ready");
+});
+
+redisClient.on('error',function() {
+ console.log("Error in Redis");
+});
 
 var client  = mqtt.connect(config.mqttServer)
 
-const motion_bedroom_1 = `${config.mqttBaseTopic}/motionSensor1 a`
-const light_bedroom_1 = `${config.mqttBaseTopic}/bedroomLights a`
-
+const allRooms = Object.keys(rulesConfig.rooms)
 
 client.on('connect', function () {
   client.subscribe('zigbee2mqtt/#', function (err) {
@@ -16,29 +25,15 @@ client.on('connect', function () {
   })
 })
 
-let activeMotionSensors = []
-
 client.on('message', function (topic, message) {  
+  // check which room the sensor is in
+  let roomID = whichRoom(topic)
+  // let roomLightsTimeout = 
 
-    // need to update this function to be aware of time, e.g. store timestamp
-
-    if ( isOccupancyInJSON(message) && !activeMotionSensors.includes(topic) ) { // if motion is detected and it's not already running a script
-      // need to add function to update time, will need to store object of topic+lastObservedTimestamp in 'activeMotionSensors'
-      activeMotionSensors.push(topic); // add the topic to the 'active' array
-      client.publish(`${light_bedroom_1}/set`, '{"color":{"x":0.5,"y":0.5},"state":"ON","brightness":100}') // set the lights to 100%
-      // setTimeout(()=> { // after 10 seconds
-      //   client.publish(`${light_bedroom_1}/set`, '{"color":{"x":0.5,"y":0.5},"state":"ON","brightness":0}') // set the lights 0%
-      //   activeMotionSensors.splice( activeMotionSensors.indexOf(topic), 1 ); // and remove the topic from the 'active' array
-      // },10000)
-    }
+  if ( isOccupancyInJSON(message) && roomID ) { // if motion is detected and it's not already running a script
+    timeFrameCheck(roomID)
+  }
 })
-
-function isAlreadyActive(message) {
-  //reset timer
-}
-
-
-// console.log(rules.rooms)
 
 function isOccupancyInJSON(message) {
   try {
@@ -54,7 +49,70 @@ function isOccupancyInJSON(message) {
   }
 }
 
+function whichRoom(topic) {
+  let activeRoom
+  allRooms.forEach(roomID => { // loop through each room
+    let roomSensors = rulesConfig.rooms[roomID].sensors // get list of topics for each sensor in the room
+    roomSensors.forEach(sensorTopic => { // for each sensor
+      if ( topic === sensorTopic ) { // if the sensor topic matches the topic
+        activeRoom = roomID // then assign the activeRoom variable with the ID of the room
+      }
+    })
+  });
+  return activeRoom // and return it
+}
 
+function timeFrameCheck(roomID) {
+  redisClient.get(roomID,function(err,lastTriggered){sendMessage(roomID,lastTriggered)}); // check to see if a timestamp already exists for the current room
+}
 
+let roomTimersArray = []    
 
+function sendMessage(roomID,lastTriggered) {
 
+  const room = rulesConfig.rooms[roomID] // store room as var
+  const timePeriods = room.timePeriods // get all the time periods associated with a room
+  let currentTime = Date.now()
+  const currentHour = new Date().getHours() // get the current time and store as an int
+
+  timePeriods.forEach( timePeriod => { // for each time period for the room
+    const start = timePeriod.start // store start
+    const end   = timePeriod.end // store end
+    let switchOffAfter = (timePeriod.switchOffAfterMins || 5) * 60000 // convert mins to ms, default is 5 minutes (if not specified in JSON)
+    
+    if ( currentHour >= start && currentHour < end ) { // if current time between the start/end
+      let timeSinceLastTrigger = currentTime - lastTriggered
+      if ( timeSinceLastTrigger < 120000 ) { // basically means the zigbee chip won't be spammed. Will only send movement once every 120 seconds.
+        console.log(`Motion detected in ${room.title} but no command is being sent`)
+        redisClient.set(`${roomID}`, currentTime );
+      } else {
+        room.lights.forEach(light => { // for each light 
+          console.log(`Motion detected in ${room.title}. Lights coming up`)
+          client.publish(
+            `${config.mqttBaseTopic}/${light}/set`, // topic
+            `{"state":"ON","brightness":${timePeriod.brightness}}`, //message
+            [],
+            () => { 
+              redisClient.set(`${roomID}`, currentTime ) // callback
+            }
+          ) 
+        })
+      }
+
+      if( roomID in roomTimersArray ) {
+        clearTimeout( roomTimersArray[roomID] )
+      }
+      roomTimersArray[roomID] = setTimeout( () => {
+        turnLightsOff(roomID)
+      } , switchOffAfter )
+
+    }
+  })
+}
+
+function turnLightsOff(roomID) {
+  const room = rulesConfig.rooms[roomID] // store room as var
+  room.lights.forEach(light => { // for each light 
+    client.publish(`${config.mqttBaseTopic}/${light}/set`, `{"state":"ON","brightness":0}`) // set the brightness
+  })
+}

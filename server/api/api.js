@@ -1,18 +1,18 @@
 var express = require('express')
 
 var cors = require("cors");
-var rules = require('../motionRules.json');
-;
+var rulesConfig = require('../../data/motionRules.json');
 
 const app = express();
 
 app.use(cors());
+app.rulesConfig = '../../data/motionRules.json'
 
 app.get('/api/v1/all_rooms', (req, res) => {
   res.status(200).send({
     success: 'true',
     message: 'rooms received successfully',
-    rooms: Object.keys(rules.rooms)
+    rooms: Object.keys(rulesConfig.rooms)
   })
 });
 
@@ -21,7 +21,7 @@ app.get('/api/v1/room', (req, res) => {
   res.status(200).send({
     success: 'true',
     message: 'rooms received successfully',
-    room: rules.rooms[roomID]
+    room: rulesConfig.rooms[roomID]
   })
 });
 
@@ -30,7 +30,7 @@ app.get('/api/v1/sensors', (req, res) => {
   res.status(200).send({
     success: 'true',
     message: 'rooms received successfully',
-    room: rules.rooms[roomID].sensors
+    room: rulesConfig.rooms[roomID].sensors
   })
 });
 
@@ -39,7 +39,7 @@ app.get('/api/v1/timePeriods', (req, res) => {
   res.status(200).send({
     success: 'true',
     message: 'rooms received successfully',
-    room: rules.rooms[roomID].timePeriods
+    room: rulesConfig.rooms[roomID].timePeriods
   })
 });
 
