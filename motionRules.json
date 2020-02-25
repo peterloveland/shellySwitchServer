@@ -1,0 +1,46 @@
+{
+  "rooms": {
+    "bedroom_1": {
+      "title": "Bedroom",
+      "sensors": {
+        "sensor_1": "topic_1",
+        "sensor_2": "topic_2"
+      },
+      "timePeriods": {
+        "1": {
+          "label": "Morning",
+          "start": "7",
+          "end": "10"
+        }
+      }
+    },
+    "lounge_1": {
+      "title": "Bedroom",
+      "sensors": {
+        "sensor_1": "topic_1",
+        "sensor_2": "topic_2"
+      },
+      "timePeriods": {
+        "1": {
+          "label": "Morning",
+          "start": "7",
+          "end": "10"
+        }
+      }
+    },
+    "kitchen_1": {
+      "title": "Bedroom",
+      "sensors": {
+        "sensor_1": "topic_1"
+      },
+      "timePeriods": {
+        "1": {
+          "label": "Morning",
+          "start": "7",
+          "end": "10"
+        }
+      }
+    }
+  },
+  "key": "new value2"
+}
