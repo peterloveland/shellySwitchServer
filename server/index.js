@@ -78,7 +78,14 @@ function sendMessage(roomID,lastTriggered) {
   timePeriods.forEach( timePeriod => { // for each time period for the room
     const start = timePeriod.start // store start
     const end   = timePeriod.end // store end
-    let switchOffAfter = (timePeriod.switchOffAfterMins || 5) * 60000 // convert mins to ms, default is 5 minutes (if not specified in JSON)
+
+
+    ///////// COULD MAKE THE DEFAULTSWITCHOFFAFTRMINS VARIABLE. E.G. IF PAST 22:00 THEN BRIGHTNESS DEFAULT IS 10%. COULD
+    ///////// COULD STILL MAKE THIS WORK ONLY WHEN THE TIME ENTRY IS IN THE MOTIONRULES.JSON CONFIG, BUT WITHOUT A BRIGHTNESS
+    ///////// THIS MIGHT ALSO WORK FOR THE UI. E.G. WHEN SETTING UP A TIME YOU OPT INTO PROVIDING A BRIGHTNESS
+ 
+
+    let switchOffAfter = (timePeriod.switchOffAfterMins || config.defaultSwitchOffAfterMins) * 60000 // convert mins to ms, default is 5 minutes (if not specified in JSON)
     
     if ( currentHour >= start && currentHour < end ) { // if current time between the start/end
       let timeSinceLastTrigger = currentTime - lastTriggered
@@ -108,6 +115,7 @@ function sendMessage(roomID,lastTriggered) {
 
     }
   })
+  
 }
 
 function turnLightsOff(roomID) {

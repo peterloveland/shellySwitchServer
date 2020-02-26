@@ -43,7 +43,8 @@
     "hall_1": {
       "title": "Hall",
       "sensors": [
-        "zigbee2mqtt/motionSensor2"
+        "zigbee2mqtt/motionSensor5",
+        "zigbee2mqtt/motionSensor6"
       ],
       "lights": [
         "hallLights"
@@ -52,11 +53,124 @@
         {
           "label": "Morning",
           "start": "7",
+          "end": "9",
+          "brightness": "1",
+          "switchOffAfterMins": 2
+        },
+        {
+          "label": "Day",
+          "start": "9",
+          "end": "20",
+          "brightness": "100",
+          "switchOffAfterMins": 5
+        },
+        {
+          "label": "Evening",
+          "start": "20",
           "end": "22",
           "brightness": "100",
+          "switchOffAfterMins": 1
+        } 
+      ]
+    },
+    "bathroom_1": {
+      "title": "Bathroom",
+      "sensors": [
+        "zigbee2mqtt/motionSensor2",
+        "zigbee2mqtt/motionSensor8"
+      ],
+      "lights": [
+        "bathroomLights"
+      ],
+      "timePeriods": [
+        {
+          "label": "Nightime",
+          "start": "0",
+          "end": "7",
+          "brightness": "1",
           "switchOffAfterMins": 2
+        },
+        {
+          "label": "Day",
+          "start": "7",
+          "end": "22",
+          "brightness": "100",
+          "switchOffAfterMins": 5
+        },
+        {
+          "label": "Evening",
+          "start": "22",
+          "end": "24",
+          "brightness": "20",
+          "switchOffAfterMins": 3
+        }
+      ]
+    },
+    "lounge_1": {
+      "title": "Lounge",
+      "sensors": [
+        "zigbee2mqtt/motionSensor4"
+      ],
+      "lights": [
+        "loungeLights"
+      ],
+      "timePeriods": [
+        {
+          "label": "Night",
+          "start": "0",
+          "end": "7",
+          "brightness": "1",
+          "switchOffAfterMins": 2
+        },
+        {
+          "label": "Day",
+          "start": "7",
+          "end": "22",
+          "brightness": "100",
+          "switchOffAfterMins": 10
+        },
+        {
+          "label": "Evening",
+          "start": "22",
+          "end": "24",
+          "brightness": "20",
+          "switchOffAfterMins": 10
+        }
+      ]
+    },
+    "kitchen_1": {
+      "title": "Kitchen",
+      "sensors": [
+        "zigbee2mqtt/motionSensor3",
+        "zigbee2mqtt/motionSensor7"
+      ],
+      "lights": [
+        "kitchenLights"
+      ],
+      "timePeriods": [
+        {
+          "label": "Night",
+          "start": "0",
+          "end": "7",
+          "brightness": "1",
+          "switchOffAfterMins": 2
+        },
+        {
+          "label": "Day",
+          "start": "7",
+          "end": "22",
+          "brightness": "100",
+          "switchOffAfterMins": 10
+        },
+        {
+          "label": "Evening",
+          "start": "22",
+          "end": "24",
+          "brightness": "20",
+          "switchOffAfterMins": 10
         }
       ]
     }
+
   }
 }
