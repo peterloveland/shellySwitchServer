@@ -14,29 +14,37 @@
           "label": "Morning",
           "start": "7",
           "end": "9",
-          "brightness": "1",
-          "switchOffAfterMins": 5
+          "trigger": {
+            "brightness": "1",
+            "switchOffAfterMins": 5
+          }
         },
         {
           "label": "Day",
           "start": "9",
           "end": "20",
-          "brightness": "100",
-          "switchOffAfterMins": 5
+          "trigger": {
+            "brightness": "100",
+            "switchOffAfterMins": 5
+          }
         },
         {
           "label": "Evening",
           "start": "20",
           "end": "22",
-          "brightness": "20",
-          "switchOffAfterMins": 5
+          "trigger": {
+            "brightness": "20",
+            "switchOffAfterMins": 5
+          }
         },
         {
           "label": "Should be in bed",
           "start": "22",
           "end": "23",
-          "brightness": "1",
-          "switchOffAfterMins": 5
+          "trigger": {
+            "brightness": "1",
+            "switchOffAfterMins": 5
+          }
         }
       ]
     },
@@ -54,23 +62,28 @@
           "label": "Morning",
           "start": "7",
           "end": "9",
-          "brightness": "1",
-          "switchOffAfterMins": 2
+          "trigger": {
+            "brightness": "1",
+            "switchOffAfterMins": 2
+          }
         },
         {
           "label": "Day",
           "start": "9",
-          "end": "20",
-          "brightness": "100",
-          "switchOffAfterMins": 5
+          "end": "12",
+          "trigger": {
+            "brightness": "100",
+            "switchOffAfterMins": 5
+          }
         },
         {
           "label": "Evening",
-          "start": "20",
-          "end": "22",
-          "brightness": "100",
-          "switchOffAfterMins": 1
-        } 
+          "start": "23",
+          "end": "24",
+          "roomTrigger": [
+            "bathroom_1"
+          ]
+        }
       ]
     },
     "bathroom_1": {
@@ -87,22 +100,28 @@
           "label": "Nightime",
           "start": "0",
           "end": "7",
-          "brightness": "1",
-          "switchOffAfterMins": 2
+          "trigger": {
+            "brightness": "1",
+            "switchOffAfterMins": 2
+          }
         },
         {
           "label": "Day",
           "start": "7",
           "end": "22",
-          "brightness": "100",
-          "switchOffAfterMins": 5
+          "trigger": {
+            "brightness": "100",
+            "switchOffAfterMins": 5
+          }
         },
         {
           "label": "Evening",
           "start": "22",
           "end": "24",
-          "brightness": "20",
-          "switchOffAfterMins": 3
+          "trigger": {
+            "brightness": "1",
+            "switchOffAfterMins": 3
+          }
         }
       ]
     },
@@ -119,22 +138,28 @@
           "label": "Night",
           "start": "0",
           "end": "7",
-          "brightness": "1",
-          "switchOffAfterMins": 2
+          "trigger": {
+            "brightness": "1",
+            "switchOffAfterMins": 2
+          }
         },
         {
           "label": "Day",
           "start": "7",
           "end": "22",
-          "brightness": "100",
-          "switchOffAfterMins": 10
+          "trigger": {
+            "brightness": "100",
+            "switchOffAfterMins": 10
+          }
         },
         {
           "label": "Evening",
           "start": "22",
           "end": "24",
-          "brightness": "20",
-          "switchOffAfterMins": 10
+          "trigger": {
+            "brightness": "20",
+            "switchOffAfterMins": 10
+          }
         }
       ]
     },
@@ -152,25 +177,30 @@
           "label": "Night",
           "start": "0",
           "end": "7",
-          "brightness": "1",
-          "switchOffAfterMins": 2
+          "trigger": {
+            "brightness": "1",
+            "switchOffAfterMins": 2
+          }
         },
         {
           "label": "Day",
           "start": "7",
           "end": "22",
-          "brightness": "100",
-          "switchOffAfterMins": 10
+          "trigger": {
+            "brightness": "100",
+            "switchOffAfterMins": 10
+          }
         },
         {
           "label": "Evening",
           "start": "22",
           "end": "24",
-          "brightness": "20",
-          "switchOffAfterMins": 10
+          "trigger": {
+            "brightness": "20",
+            "switchOffAfterMins": 10
+          }
         }
       ]
     }
-
   }
 }

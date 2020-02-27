@@ -3,6 +3,7 @@ global.__basedir = __dirname;
 var mqtt = require('mqtt')
 var config = require('../data/appConfig.json');
 var rulesConfig = require('../data/motionRules.json');
+var defaultRules = require('../data/rulesDefault.json');
 const redis = require("redis");
 const redisClient = redis.createClient();
 // var api = require('./api/api.js');
@@ -63,7 +64,9 @@ function whichRoom(topic) {
 }
 
 function timeFrameCheck(roomID) {
-  redisClient.get(roomID,function(err,lastTriggered){sendMessage(roomID,lastTriggered)}); // check to see if a timestamp already exists for the current room
+  redisClient.get(roomID,function(err,lastTriggered){ // check to see if a timestamp already exists for the current room
+    sendMessage(roomID,lastTriggered) // callback
+  }); 
 }
 
 let roomTimersArray = []    
@@ -79,31 +82,29 @@ function sendMessage(roomID,lastTriggered) {
     const start = timePeriod.start // store start
     const end   = timePeriod.end // store end
 
-
     ///////// COULD MAKE THE DEFAULTSWITCHOFFAFTRMINS VARIABLE. E.G. IF PAST 22:00 THEN BRIGHTNESS DEFAULT IS 10%. COULD
     ///////// COULD STILL MAKE THIS WORK ONLY WHEN THE TIME ENTRY IS IN THE MOTIONRULES.JSON CONFIG, BUT WITHOUT A BRIGHTNESS
-    ///////// THIS MIGHT ALSO WORK FOR THE UI. E.G. WHEN SETTING UP A TIME YOU OPT INTO PROVIDING A BRIGHTNESS
- 
+    ///////// THIS MIGHT ALSO WORK FOR THE UI. E.G. WHEN SETTING UP A TIME YOU OPT INTO PROVIDING A BRIGHTNESS 
 
     let switchOffAfter = (timePeriod.switchOffAfterMins || config.defaultSwitchOffAfterMins) * 60000 // convert mins to ms, default is 5 minutes (if not specified in JSON)
     
     if ( currentHour >= start && currentHour < end ) { // if current time between the start/end
       let timeSinceLastTrigger = currentTime - lastTriggered
-      if ( timeSinceLastTrigger < 120000 ) { // basically means the zigbee chip won't be spammed. Will only send movement once every 120 seconds.
+      if ( timeSinceLastTrigger < 0 ) { // basically means the zigbee chip won't be spammed. Will only send movement once every 120 seconds.
         console.log(`Motion detected in ${room.title} but no command is being sent`)
         redisClient.set(`${roomID}`, currentTime );
       } else {
-        room.lights.forEach(light => { // for each light 
-          console.log(`Motion detected in ${room.title}. Lights coming up`)
-          client.publish(
-            `${config.mqttBaseTopic}/${light}/set`, // topic
-            `{"state":"ON","brightness":${timePeriod.brightness}}`, //message
-            [],
-            () => { 
-              redisClient.set(`${roomID}`, currentTime ) // callback
-            }
-          ) 
-        })
+        if ( timePeriod.trigger ) { // if the trigger is set
+          room.lights.forEach(lightTopic => { // for each light 
+            console.log(`${room.title} triggered. Lights coming up`)
+            sendLightCommand(roomID,timePeriod,lightTopic,currentTime)
+          })
+        }
+        if ( timePeriod.roomTrigger ) { // if the roomTrigger is set
+          console.log(`Motion detected in ${roomID} but running motion against ${timePeriod.roomTrigger}`)
+          timeFrameCheck(timePeriod.roomTrigger)
+          return
+        }
       }
 
       if( roomID in roomTimersArray ) {
@@ -123,4 +124,34 @@ function turnLightsOff(roomID) {
   room.lights.forEach(light => { // for each light 
     client.publish(`${config.mqttBaseTopic}/${light}/set`, `{"state":"ON","brightness":0}`) // set the brightness
   })
+}
+
+function sendLightCommand(roomID,timePeriod,lightTopic,currentTime) {
+  let brightness
+  if ( timePeriod.trigger.brightness ) { // if brightness has been set
+    brightness = timePeriod.trigger.brightness // use this value
+  } else { // if brightness hasn't been set
+    brightness = checkDefaultBrightness()
+  }
+  client.publish(
+    `${config.mqttBaseTopic}/${lightTopic}/set`, // topic
+    `{"state":"ON","brightness":${ brightness  }}`, //message
+    [],
+    () => { 
+      redisClient.set(`${roomID}`, currentTime ) // callback
+    }
+  ) 
+}
+
+function checkDefaultBrightness() {
+  let brightness
+  defaultRules.timePeriodDefaults.forEach( defaultTimePeriod => { // for each time period for the room
+    const currentHour = new Date().getHours()
+    const start = defaultTimePeriod.start // store start
+    const end   = defaultTimePeriod.end // store end
+    if ( currentHour >= start && currentHour < end ) { // if current time between the start/end
+      brightness = defaultTimePeriod.brightness // store the default brightness as the brightness to be set
+    }
+  })
+  return brightness || 100 // return the default brightness, unless it wasn't found (currentHour wasn't found between start/end) in which case return 100
 }

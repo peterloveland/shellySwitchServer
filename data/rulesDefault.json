@@ -1,0 +1,22 @@
+{
+  "timePeriodDefaults": [
+    {
+      "start": "0",
+      "end": "7",
+      "brightness": "1",
+      "switchOffAfterMins": 5
+    },
+    {
+      "start": "7",
+      "end": "14",
+      "brightness": "11100",
+      "switchOffAfterMins": 5
+    },
+    {
+      "start": "22",
+      "end": "24",
+      "brightness": "1",
+      "switchOffAfterMins": 5
+    }
+  ]
+}
