@@ -70,7 +70,7 @@
         {
           "label": "Day",
           "start": "9",
-          "end": "12",
+          "end": "22",
           "trigger": {
             "brightness": "100",
             "switchOffAfterMins": 5

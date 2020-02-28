@@ -6,7 +6,7 @@ var rulesConfig = require('../data/motionRules.json');
 var defaultRules = require('../data/rulesDefault.json');
 const redis = require("redis");
 const redisClient = redis.createClient();
-// var api = require('./api/api.js');
+var api = require('./api/api.js');
 
 redisClient.on('ready',function() {
  console.log("Redis is ready");
