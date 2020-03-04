@@ -1,5 +1,5 @@
 import React from 'react';
-import './App.css';
+import './App.scss';
 import Timeline from './components/Timeline/Timeline';
 import {
   BrowserRouter as Router,
@@ -102,14 +102,16 @@ export class GetRoomContents extends React.Component {
     let room
     let lights
     let sensors
+    let timePeriods
     
     if ( !this.state.isLoading ) {
       room = this.state.apiResponse.room
       lights = room.lights
       sensors = room.sensors
+      timePeriods = room.timePeriods
       return (
         <div>
-          <Timeline />
+          <Timeline timePeriods={timePeriods}/>
           <h3>ID: {room.title}</h3>
           <p>Number of lights: { lights.length }</p>
           <p>Number of sensors: { sensors.length }</p>
@@ -118,6 +120,7 @@ export class GetRoomContents extends React.Component {
     } else {
       return (
         <React.Fragment>
+          <Timeline timePeriods={timePeriods}/>
           <h3>ID: {this.props.id}</h3>
           <p>Loading</p>
         </React.Fragment>

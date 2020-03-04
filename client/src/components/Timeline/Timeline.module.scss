@@ -1,8 +1,104 @@
+$pillWidth: 4rem;
+$pillSpacing: 1rem;
+
+:export {
+  pillWidth: $pillWidth;
+  pillSpacing: $pillSpacing;
+}
+
+
 .allHours {
   display: flex;
   width: 100%;
   overflow: scroll;
+  margin-top: var(--spacing-05);
 }
+
 .hourContainer {
-  padding: 1rem;
+  display: flex;
+  // border-left: 1px solid grey;
+  // padding-left: var(--spacing-04);
+  text-align: left;
+  flex-shrink: 0;
+  width: $pillWidth;
+  padding-right: $pillSpacing/2;
+
+  &:hover {
+    // a {
+    //   font-weight: 700;
+    // }
+  }
+  
+  &.isFirst {
+    margin-left: var(--spacing-04);
+    background: green;
+    content: "isFirst";
+  }
+  &.isLast {
+    margin-right: var(--spacing-04);
+    
+    content: "isLast";
+  }
+}
+
+
+
+
+.hourPill {
+  // padding: .25rem 4rem 4rem .25rem;
+  background: var(--gray-10);
+  // margin-left: var(--spacing-04);
+  border-radius: 1rem;
+  height: 4rem;
+  margin-top: 1.5rem;
+  width: 100%;
+  margin-left: $pillSpacing/2;
+  &:hover {
+    background: var(--gray-20);
+    cursor: pointer;
+  }
+  &.isActive {
+    background: red;
+    margin-right: 0;
+    margin-left: 0;
+  }
+}
+
+.labelContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 2.5rem;
+  flex-shrink: 0;
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+  .keyline {
+    width: 1px;
+    background: var(--gray-10);
+    flex-grow: 1;
+
+  }
+  .hourLabelContainer {
+    flex-basis: 1.5rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  a {
+    text-align: center;
+    height: 1rem;
+    font-size: 12px;
+    color: rgb(65, 65, 65);
+  }
+}
+
+
+.groupContainer {
+  background: var(--gray-10);
+  width: 100%;
+  border-radius: 1rem;
+  margin-top: 1.5rem;
+
+  padding-right: $pillSpacing/2;
 }

@@ -12,8 +12,8 @@
       "timePeriods": [
         {
           "label": "Morning",
-          "start": "7",
-          "end": "9",
+          "start": 8,
+          "end": 9,
           "trigger": {
             "brightness": "1",
             "switchOffAfterMins": 5
@@ -21,8 +21,8 @@
         },
         {
           "label": "Day",
-          "start": "9",
-          "end": "20",
+          "start": 9,
+          "end": 18,
           "trigger": {
             "brightness": "100",
             "switchOffAfterMins": 5
@@ -30,8 +30,8 @@
         },
         {
           "label": "Evening",
-          "start": "20",
-          "end": "22",
+          "start": 20,
+          "end": 22,
           "trigger": {
             "brightness": "20",
             "switchOffAfterMins": 5
@@ -39,8 +39,8 @@
         },
         {
           "label": "Should be in bed",
-          "start": "22",
-          "end": "23",
+          "start": 22,
+          "end": 23,
           "trigger": {
             "brightness": "1",
             "switchOffAfterMins": 5
@@ -60,8 +60,8 @@
       "timePeriods": [
         {
           "label": "Morning",
-          "start": "7",
-          "end": "9",
+          "start": 7,
+          "end": 9,
           "trigger": {
             "brightness": "1",
             "switchOffAfterMins": 2
@@ -69,8 +69,8 @@
         },
         {
           "label": "Day",
-          "start": "9",
-          "end": "22",
+          "start": 9,
+          "end": 22,
           "trigger": {
             "brightness": "100",
             "switchOffAfterMins": 5
@@ -78,8 +78,8 @@
         },
         {
           "label": "Evening",
-          "start": "23",
-          "end": "24",
+          "start": 23,
+          "end": 24,
           "roomTrigger": [
             "bathroom_1"
           ]
@@ -98,8 +98,8 @@
       "timePeriods": [
         {
           "label": "Nightime",
-          "start": "0",
-          "end": "7",
+          "start": 0,
+          "end": 7,
           "trigger": {
             "brightness": "1",
             "switchOffAfterMins": 2
@@ -107,8 +107,8 @@
         },
         {
           "label": "Day",
-          "start": "7",
-          "end": "22",
+          "start": 7,
+          "end": 22,
           "trigger": {
             "brightness": "100",
             "switchOffAfterMins": 5
@@ -116,8 +116,8 @@
         },
         {
           "label": "Evening",
-          "start": "22",
-          "end": "24",
+          "start": 22,
+          "end": 24,
           "trigger": {
             "brightness": "1",
             "switchOffAfterMins": 3
@@ -136,8 +136,8 @@
       "timePeriods": [
         {
           "label": "Night",
-          "start": "0",
-          "end": "7",
+          "start": 0,
+          "end": 7,
           "trigger": {
             "brightness": "1",
             "switchOffAfterMins": 2
@@ -145,8 +145,8 @@
         },
         {
           "label": "Day",
-          "start": "7",
-          "end": "22",
+          "start": 7,
+          "end": 22,
           "trigger": {
             "brightness": "100",
             "switchOffAfterMins": 10
@@ -154,8 +154,8 @@
         },
         {
           "label": "Evening",
-          "start": "22",
-          "end": "24",
+          "start": 22,
+          "end": 24,
           "trigger": {
             "brightness": "20",
             "switchOffAfterMins": 10
@@ -175,29 +175,20 @@
       "timePeriods": [
         {
           "label": "Night",
-          "start": "0",
-          "end": "7",
+          "start": 5,
+          "end": 7,
           "trigger": {
             "brightness": "1",
             "switchOffAfterMins": 2
           }
         },
         {
-          "label": "Day",
-          "start": "7",
-          "end": "22",
+          "label": "Night",
+          "start": 9,
+          "end": 12,
           "trigger": {
-            "brightness": "100",
-            "switchOffAfterMins": 10
-          }
-        },
-        {
-          "label": "Evening",
-          "start": "22",
-          "end": "24",
-          "trigger": {
-            "brightness": "20",
-            "switchOffAfterMins": 10
+            "brightness": "1",
+            "switchOffAfterMins": 2
           }
         }
       ]
