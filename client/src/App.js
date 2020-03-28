@@ -1,11 +1,12 @@
 import React from 'react';
 import './App.scss';
-import Timeline from './components/Timeline/Timeline';
+import GetRoomContents from './components/GetRoomData/GetRoomContents';
+import GetRoomList from './components/GetRoomData/GetRoomList';
+
 import {
   BrowserRouter as Router,
   Switch,
-  Route,
-  Link
+  Route
 } from "react-router-dom";
 
 export default class App extends React.Component {
@@ -13,9 +14,48 @@ export default class App extends React.Component {
     super(props);
     this.state = {
       apiResponse: {},
-      isLoading: false
+      isLoading: false,
+      isInDraggingMode: false,
+      mousePosition: { x: 0, y: 0 },
+      timelineScroll: 0,
+      timelineScrollCalc: 0
     };
+
+    this.triggerDraggingMode = this.triggerDraggingMode.bind(this);
+    this.updateTimelineScroll = this.updateTimelineScroll.bind(this);
+    
   }
+
+  
+  onMouseMove(e) {
+    this.setState({
+      mousePosition: { 
+        x: e.clientX,
+        y: e.clientY
+      }
+    });
+    this.timelineScrollCalc();
+  }
+
+  updateTimelineScroll( position ) {
+    this.setState({ timelineScroll: position })
+    this.timelineScrollCalc();
+  }
+  
+  timelineScrollCalc() {
+    this.setState({ timelineScrollCalc: this.state.mousePosition.x + this.state.timelineScroll })
+  }
+  
+  triggerDraggingMode( toggle ) {
+    // alert(toggle)
+    if ( toggle ) {
+      this.setState({ isInDraggingMode: true })
+    } else {
+      this.setState({ isInDraggingMode: false })
+    }
+  }
+
+  
 
   callAPI() {
     fetch("http://localhost:5000/api/v1/all_rooms")
@@ -34,15 +74,32 @@ export default class App extends React.Component {
 
     return (
       <Router>
-        <div>
+        <div
+          onMouseMove={this.onMouseMove.bind(this)}
+          onMouseUp={
+            () => {
+              this.triggerDraggingMode( false )
+            }
+          }
+        >
           <div>
-            { this.state.apiResponse.success ? Object.keys(allRooms).map(id => <GetRoomList key={id} id={id} room={allRooms[id]} /> ) : "Loading" }
+            {
+              this.state.apiResponse.success ?
+                Object.keys(allRooms).map(
+                  id => <GetRoomList key={id} id={id} room={allRooms[id]} />
+                )
+                : "Loading"
+            }
           </div>
           <Switch>
             <Route path="/:id" render={(props)=>(
               <GetRoomContents
                 key={props.match.params.id}
                 id={props.match.params.id}
+                triggerDraggingMode={this.triggerDraggingMode}
+                updateTimelineScroll={this.updateTimelineScroll}
+                xPos={this.state.timelineScrollCalc}
+                timelineScroll={this.state.timelineScroll}
               />
             )} />
           </Switch>
@@ -50,83 +107,5 @@ export default class App extends React.Component {
       </Router>
 
     )
-  }
-}
-
-
-
-export class GetRoomList extends React.Component {
-  constructor(props) {
-    super(props);
-  }
-  render() {
-
-    let roomID = this.props.id
-    let roomTitle = this.props.room.label
-
-    return (
-      <div>
-        <Link to={roomID}>
-          {roomTitle}
-        </Link>
-      </div>
-    )
-
-  }
-}
-
-export class GetRoomContents extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      apiResponse: {},
-      isLoading: true,
-      error: false
-    };
-  }
-  
-  callAPI() {
-    fetch(`http://localhost:5000/api/v1/room?roomID=${this.props.id}`)
-      .then(res => res.json())
-      .then(res => this.setState({ apiResponse: res, isLoading: false }))
-      .catch(error => this.setState({ error: true, isLoading: false }));
-  }
-  
-
-  componentDidMount() {
-    this.callAPI();
-  }
-
-  render() {
-  
-    let room
-    let lights
-    let sensors
-    let timePeriods
-    
-    if ( !this.state.isLoading ) {
-      room = this.state.apiResponse.room
-      lights = room.lights
-      sensors = room.sensors
-      timePeriods = room.timePeriods
-      return (
-        <div>
-          <Timeline timePeriods={timePeriods}/>
-          <h3>ID: {room.title}</h3>
-          <p>Number of lights: { lights.length }</p>
-          <p>Number of sensors: { sensors.length }</p>
-        </div>
-      )
-    } else {
-      return (
-        <React.Fragment>
-          <Timeline timePeriods={timePeriods}/>
-          <h3>ID: {this.props.id}</h3>
-          <p>Loading</p>
-        </React.Fragment>
-      )
-    }
-
-
   }
 }

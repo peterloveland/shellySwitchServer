@@ -133,35 +133,7 @@
       "lights": [
         "loungeLights"
       ],
-      "timePeriods": [
-        {
-          "label": "Night",
-          "start": 0,
-          "end": 7,
-          "trigger": {
-            "brightness": "1",
-            "switchOffAfterMins": 2
-          }
-        },
-        {
-          "label": "Day",
-          "start": 7,
-          "end": 22,
-          "trigger": {
-            "brightness": "100",
-            "switchOffAfterMins": 10
-          }
-        },
-        {
-          "label": "Evening",
-          "start": 22,
-          "end": 24,
-          "trigger": {
-            "brightness": "20",
-            "switchOffAfterMins": 10
-          }
-        }
-      ]
+      "timePeriods": []
     },
     "kitchen_1": {
       "title": "Kitchen",
