@@ -12,9 +12,17 @@ $pillSpacing: .5rem;
   width: 100%;
   overflow: scroll;
   margin-top: var(--spacing-05);
-  scroll-snap-type: x mandatory;
+  
   -ms-overflow-style: none;
   position: relative;
+  // scroll-behavior: smooth;
+  &.noScrollSnap {
+    scroll-snap-type: none;
+  }
+  &.animateScroll {
+    scroll-behavior: smooth;
+    scroll-snap-type: proximity x; 
+  }
   &::-webkit-scrollbar {
     display: none;
   }
@@ -28,7 +36,10 @@ $pillSpacing: .5rem;
   text-align: left;
   flex-shrink: 0;
   width: $pillWidth;
+  padding-left: $pillSpacing/2;
   padding-right: $pillSpacing/2;
+  padding-bottom: 1rem;
+  padding-top: 1rem;
   user-select: none;
 
   &:hover {
@@ -53,7 +64,6 @@ $pillSpacing: .5rem;
 .marker {
   display: block;
   width: 1px;
-  height: 200px;
   background: red;
   position: absolute;
   pointer-events: none;
@@ -71,7 +81,7 @@ $pillSpacing: .5rem;
   height: 4rem;
   margin-top: 1.5rem;
   width: 100%;
-  margin-left: $pillSpacing/2;
+  // margin-left: $pillSpacing/2;
   display: flex;
   align-items: center;
   justify-content: center;

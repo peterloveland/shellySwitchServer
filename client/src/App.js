@@ -18,14 +18,13 @@ export default class App extends React.Component {
       isInDraggingMode: false,
       mousePosition: { x: 0, y: 0 },
       timelineScroll: 0,
-      timelineScrollCalc: 0
+      timelineHoverXPos: 0
     };
 
     this.triggerDraggingMode = this.triggerDraggingMode.bind(this);
     this.updateTimelineScroll = this.updateTimelineScroll.bind(this);
     
   }
-
   
   onMouseMove(e) {
     this.setState({
@@ -43,7 +42,7 @@ export default class App extends React.Component {
   }
   
   timelineScrollCalc() {
-    this.setState({ timelineScrollCalc: this.state.mousePosition.x + this.state.timelineScroll })
+    this.setState({ timelineHoverXPos: this.state.mousePosition.x + this.state.timelineScroll })
   }
   
   triggerDraggingMode( toggle ) {
@@ -98,8 +97,9 @@ export default class App extends React.Component {
                 id={props.match.params.id}
                 triggerDraggingMode={this.triggerDraggingMode}
                 updateTimelineScroll={this.updateTimelineScroll}
-                xPos={this.state.timelineScrollCalc}
                 timelineScroll={this.state.timelineScroll}
+                timelineHoverXPos={this.state.timelineHoverXPos}
+                mousePosition={this.state.mousePosition.x}
               />
             )} />
           </Switch>

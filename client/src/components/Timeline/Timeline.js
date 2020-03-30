@@ -4,17 +4,28 @@ import styles from './Timeline.module.scss';
 let myArray = []
 let lastSelected
 let originalSelect
+let timelineWidth
+let intervalTimer
 
 export default class Timeline extends React.Component {
   constructor(props) {
     super(props);
+    this.selector = React.createRef();
     this.state = {
       isDragging: false,
-      hoveredTiles: []
+      hoveredTiles: [],
+      isForcedScrolling: false,
+      rightScrollIntervalID: 0,
+      leftScrollIntervalID: 0
     };
   }
   
-  
+
+  componentDidMount = () => {
+    timelineWidth = this.selector.current.getClientRects()[0].width;
+  };
+
+
   checkIfRemovalRequired = (myArray, theValue, direction, callback) => {
 
     if ( !myArray.includes(theValue) ) { // prevents duplicates
@@ -36,7 +47,6 @@ export default class Timeline extends React.Component {
         myArray.shift()
       }
     }
-
   }
   
   
@@ -67,8 +77,7 @@ export default class Timeline extends React.Component {
         } else {
           // you're only hovered on the one tile, so override the array with this value
           myArray = [theValue]
-        }
-        console.log(myArray)      
+        }   
       }
 
 
@@ -76,12 +85,62 @@ export default class Timeline extends React.Component {
 
   handleScroll = e => {
     let element = e.target
-    // console.log(element.scrollLeft)
     this.props.updateTimelineScroll(element.scrollLeft)
   }
 
-  render() {
+  scrollRight = () => {
+    this.selector.current.scrollLeft = this.selector.current.scrollLeft + 100;
+  }
 
+  scrollLeft = () => {
+    this.selector.current.scrollLeft = this.selector.current.scrollLeft - 100;
+  }
+
+  dragScrollTimeline() {
+    let edgeTriggerDistance = 80
+    
+    let mousePosition = this.props.mousePosition
+
+    let distanceFromLeft  = mousePosition
+    let distanceFromRight = timelineWidth - mousePosition
+
+    let inLeftScrollZone =  distanceFromLeft  < edgeTriggerDistance && this.state.isDragging
+    let inRightScrollZone = distanceFromRight < edgeTriggerDistance && this.state.isDragging
+
+    let isForcedScrolling = this.state.isForcedScrolling
+
+    if( inRightScrollZone ) {
+      if( !isForcedScrolling ) {
+        let rightIntervalID = setInterval(this.scrollRight, 600);
+        this.setState({
+          rightScrollIntervalID: rightIntervalID,
+          isForcedScrolling : true
+        })
+      }
+    } else if( inLeftScrollZone ) {
+      if( !isForcedScrolling ) {
+        let leftIntervalID = setInterval(this.scrollLeft, 600);
+        this.setState({
+          leftScrollIntervalID: leftIntervalID,
+          isForcedScrolling : true
+        })
+      }
+    } else {
+      if( isForcedScrolling ) {
+        this.setState({
+          isForcedScrolling : false
+        })
+        clearInterval( this.state.leftScrollIntervalID )
+        clearInterval( this.state.rightScrollIntervalID )
+      }
+    }    
+  }
+  
+  render() {
+    
+    this.dragScrollTimeline()
+
+    
     let timePeriods = this.props.timePeriods || []
 
     let hourTimelineData = []
@@ -145,7 +204,6 @@ export default class Timeline extends React.Component {
       }
     })
 
-
     for (var i = indexesToRemove.length -1; i >= 0; i--) {
       hourTimelineData.splice(indexesToRemove[i],1);
     }
@@ -196,8 +254,9 @@ export default class Timeline extends React.Component {
   
     return (
       <div
-        className={`${styles.allHours}`}
+        className={`${styles.allHours} ${ this.state.isDragging ? styles.noScrollSnap : null } ${ this.state.isForcedScrolling ? styles.animateScroll : null}`}
         onScroll={this.handleScroll}
+        ref={this.selector}
         onMouseDown={
           () => {
             this.props.triggerDraggingMode(true)
@@ -217,10 +276,10 @@ export default class Timeline extends React.Component {
         }
       >
         <div
-          style={{ left: this.props.xPos}}
+          style={{ left: this.props.timelineHoverXPos}}
           className={styles.marker}
         >
-          { this.props.xPos }
+          { this.props.timelineHoverXPos }
         </div> 
         {hourTimelineJSX}
       </div>
@@ -230,26 +289,13 @@ export default class Timeline extends React.Component {
 }
 
 
-
-
 export class HourContainer extends React.Component {
   constructor(props) {
     super(props);
     this.selector = React.createRef();
     this.state = {
       startPoint: 0
-      // isDragging: false
     };
-  }
-
-  
-
-  // can remove this functio eventually
-  getTheValue() {
-    const rect = this.selector.current.getBoundingClientRect();
-    let start = rect.x + this.props.timelineScroll
-    let end = rect.x + this.props.timelineScroll + rect.width
-    return `${ start } – ${ end  }`
   }
 
   isHourBeingHovered() {
@@ -257,9 +303,9 @@ export class HourContainer extends React.Component {
     let start = rect.x + this.props.timelineScroll
     let end = rect.x + this.props.timelineScroll + rect.width
 
-    let mouseHoverXPos = this.props.xPos
+    let timelineHoverXPos = this.props.timelineHoverXPos
 
-    if ( start < mouseHoverXPos && mouseHoverXPos < end ) {
+    if ( start < timelineHoverXPos && timelineHoverXPos < end ) {
       this.props.addToHoveredTiles( this.props.hour )
       return styles.tileIsHovered
     }
@@ -267,8 +313,8 @@ export class HourContainer extends React.Component {
   }
   
   render() {
-
-    let isHighlighted = this.props.hoveredTiles.includes(this.props.hour) ? styles.isHighlighted : null
+    let isHourActive = this.props.hoveredTiles.includes(this.props.hour)
+    let isHighlighted = isHourActive ? styles.isHighlighted : null
 
     return(
       <div
@@ -281,7 +327,7 @@ export class HourContainer extends React.Component {
           onMouseOver={this.props.onMouseOver}
           className={`${styles.hourPill} ${this.props.className} `}
         >
-          <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div>
+          { !isHourActive ? <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> : null }
         </div>
       </div>
     )
@@ -304,13 +350,10 @@ export class GroupContainer extends React.Component {
 
   componentDidMount = () => {
     const rect = this.selector.current.getClientRects();
-    console.log(rect[0].x)
     this.setState({ startPoint: rect[0].x })
   };
   
   render() {
-
-
     return(
       <div
         className={`${styles.groupContainer}`}

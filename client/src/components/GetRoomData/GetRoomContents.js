@@ -40,8 +40,9 @@ export default class GetRoomContents extends React.Component {
         triggerDraggingMode: this.props.triggerDraggingMode,
         timePeriods: timePeriods,
         updateTimelineScroll: this.props.updateTimelineScroll,
-        xPos: this.props.xPos,
-        timelineScroll: this.props.timelineScroll
+        timelineHoverXPos: this.props.timelineHoverXPos,
+        timelineScroll: this.props.timelineScroll,
+        mousePosition: this.props.mousePosition
       }
       return (
         <div>
