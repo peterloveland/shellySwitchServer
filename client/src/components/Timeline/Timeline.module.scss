@@ -41,11 +41,15 @@ $pillSpacing: .5rem;
   padding-bottom: 1rem;
   padding-top: 1rem;
   user-select: none;
+  // transition: 0.1s;
+
 
   &:hover {
     // a {
     //   font-weight: 700;
     // }
+    // transform: scale(1.07);
+    // transform: scale(2);
   }
   
   &.isFirst {

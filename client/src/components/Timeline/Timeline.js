@@ -5,7 +5,6 @@ let myArray = []
 let lastSelected
 let originalSelect
 let timelineWidth
-let intervalTimer
 
 export default class Timeline extends React.Component {
   constructor(props) {
@@ -99,7 +98,7 @@ export default class Timeline extends React.Component {
   dragScrollTimeline() {
     let edgeTriggerDistance = 80
     
-    let mousePosition = this.props.mousePosition
+    let mousePosition = this.props.mousePosition ? this.props.mousePosition.x : null
 
     let distanceFromLeft  = mousePosition
     let distanceFromRight = timelineWidth - mousePosition
@@ -111,7 +110,7 @@ export default class Timeline extends React.Component {
 
     if( inRightScrollZone ) {
       if( !isForcedScrolling ) {
-        let rightIntervalID = setInterval(this.scrollRight, 600);
+        let rightIntervalID = setInterval(this.scrollRight, 500);
         this.setState({
           rightScrollIntervalID: rightIntervalID,
           isForcedScrolling : true
@@ -119,7 +118,7 @@ export default class Timeline extends React.Component {
       }
     } else if( inLeftScrollZone ) {
       if( !isForcedScrolling ) {
-        let leftIntervalID = setInterval(this.scrollLeft, 600);
+        let leftIntervalID = setInterval(this.scrollLeft, 500);
         this.setState({
           leftScrollIntervalID: leftIntervalID,
           isForcedScrolling : true
@@ -140,7 +139,6 @@ export default class Timeline extends React.Component {
     
     this.dragScrollTimeline()
 
-    
     let timePeriods = this.props.timePeriods || []
 
     let hourTimelineData = []
@@ -232,7 +230,7 @@ export default class Timeline extends React.Component {
         // let pillWidth = +styles.pillWidth.replace('rem','')
         // let pillSpacing = +styles.pillSpacing.replace('rem','')
         // const mystyle = {
-        //   width: `${(pillWidth)*hourObj.state.groupLength}rem`
+          // width: `${(pillWidth)*hourObj.state.groupLength}rem`
         // };
         hourTimelineJSX.push(
           <div
@@ -298,13 +296,31 @@ export class HourContainer extends React.Component {
     };
   }
 
-  isHourBeingHovered() {
+  onMouseMove = () => {
+    let rect
+    if( this.selector.current ) {
+      rect = this.selector.current.getBoundingClientRect();
+    }
+
+    let xCenterPoint = rect.x + (rect.width / 2)
+    let yCenterPoint = rect.y + (rect.height / 2)
+    let mousePosition = this.props.mousePosition
+    let xPercentage = ((mousePosition.x - xCenterPoint)/(rect.width / 2)).toFixed(2)
+    let yPercentage = ((mousePosition.y - yCenterPoint)/(rect.height / 2)).toFixed(2)
+
+    const maxRotation = 15
+
+    let xPixel = (xPercentage * maxRotation).toFixed(1)*-1
+    let yPixel = (yPercentage * maxRotation).toFixed(1)*-1
+    
+    this.setState({transformRotate: `scale(1.2) rotateX(${ xPixel }deg) rotateY(${ yPixel }deg)`})
+  }
+
+  isHourBeingDragged() {
     const rect = this.selector.current.getBoundingClientRect();
     let start = rect.x + this.props.timelineScroll
     let end = rect.x + this.props.timelineScroll + rect.width
-
     let timelineHoverXPos = this.props.timelineHoverXPos
-
     if ( start < timelineHoverXPos && timelineHoverXPos < end ) {
       this.props.addToHoveredTiles( this.props.hour )
       return styles.tileIsHovered
@@ -315,19 +331,23 @@ export class HourContainer extends React.Component {
   render() {
     let isHourActive = this.props.hoveredTiles.includes(this.props.hour)
     let isHighlighted = isHourActive ? styles.isHighlighted : null
-
+    const mystyle = {
+      transform: this.state.transformRotate
+    };
     return(
       <div
-        className={`${styles.hourContainer} ${ this.props.isDragging ? this.isHourBeingHovered() : null } ${isHighlighted}`}
+        className={`${styles.hourContainer} ${ this.props.isDragging ? this.isHourBeingDragged() : null } ${isHighlighted}`}
         ref={this.selector}
       >
         <div
           key={this.props.hour}
           onMouseDown={this.props.onMouseDown}
           onMouseOver={this.props.onMouseOver}
+          onMouseMove={this.onMouseMove}
           className={`${styles.hourPill} ${this.props.className} `}
+          style={mystyle}
         >
-          { !isHourActive ? <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> : null }
+          { !isHourActive ? <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> : <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> }
         </div>
       </div>
     )

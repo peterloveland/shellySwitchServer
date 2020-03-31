@@ -99,7 +99,7 @@ export default class App extends React.Component {
                 updateTimelineScroll={this.updateTimelineScroll}
                 timelineScroll={this.state.timelineScroll}
                 timelineHoverXPos={this.state.timelineHoverXPos}
-                mousePosition={this.state.mousePosition.x}
+                mousePosition={this.state.mousePosition}
               />
             )} />
           </Switch>

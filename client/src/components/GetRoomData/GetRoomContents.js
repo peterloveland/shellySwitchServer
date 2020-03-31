@@ -46,12 +46,12 @@ export default class GetRoomContents extends React.Component {
       }
       return (
         <div>
-          <Timeline
-            {...sharedProps}
-          />
           <h3>ID: {room.title}</h3>
           <p>Number of lights: { lights.length }</p>
           <p>Number of sensors: { sensors.length }</p>
+          <Timeline
+            {...sharedProps}
+          />
         </div>
       )
     } else {
