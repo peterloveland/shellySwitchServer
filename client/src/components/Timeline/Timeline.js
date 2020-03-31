@@ -96,6 +96,7 @@ export default class Timeline extends React.Component {
   }
 
   dragScrollTimeline() {
+    
     let edgeTriggerDistance = 80
     
     let mousePosition = this.props.mousePosition ? this.props.mousePosition.x : null
@@ -131,6 +132,10 @@ export default class Timeline extends React.Component {
         })
         clearInterval( this.state.leftScrollIntervalID )
         clearInterval( this.state.rightScrollIntervalID )
+        // clear all intervals (seemed to be a memory leak?
+        for (let index = 0; index < Math.max(this.state.leftScrollIntervalID,this.state.rightScrollIntervalID); index++) {
+          // clearInterval( index )        
+        }
       }
     }    
   }
@@ -273,12 +278,12 @@ export default class Timeline extends React.Component {
           }
         }
       >
-        <div
+        {/* <div
           style={{ left: this.props.timelineHoverXPos}}
           className={styles.marker}
         >
           { this.props.timelineHoverXPos }
-        </div> 
+        </div>  */}
         {hourTimelineJSX}
       </div>
     )
@@ -292,28 +297,36 @@ export class HourContainer extends React.Component {
     super(props);
     this.selector = React.createRef();
     this.state = {
-      startPoint: 0
+      startPoint: 0,
+      isHover: false
     };
   }
 
   onMouseMove = () => {
-    let rect
+    let mousePosition = this.props.mousePosition,
+    rect
+
     if( this.selector.current ) {
       rect = this.selector.current.getBoundingClientRect();
     }
 
-    let xCenterPoint = rect.x + (rect.width / 2)
-    let yCenterPoint = rect.y + (rect.height / 2)
-    let mousePosition = this.props.mousePosition
-    let xPercentage = ((mousePosition.x - xCenterPoint)/(rect.width / 2)).toFixed(2)
-    let yPercentage = ((mousePosition.y - yCenterPoint)/(rect.height / 2)).toFixed(2)
+    let startX = rect.x,
+        startY = rect.y,
+        blurMove = `translate(${ (mousePosition.x - startX).toFixed(0) }px,${ (mousePosition.y - startY).toFixed(0) }px)`
 
-    const maxRotation = 15
+    let xCenterPoint = rect.x + (rect.width / 2),
+        yCenterPoint = rect.y + (rect.height / 2),
+        xPercentage = ((mousePosition.x - xCenterPoint)/(rect.width / 2)).toFixed(2),
+        yPercentage = ((mousePosition.y - yCenterPoint)/(rect.height / 2)).toFixed(2)
 
-    let xPixel = (xPercentage * maxRotation).toFixed(1)*-1
-    let yPixel = (yPercentage * maxRotation).toFixed(1)*-1
-    
-    this.setState({transformRotate: `scale(1.2) rotateX(${ xPixel }deg) rotateY(${ yPixel }deg)`})
+        
+    let maxRotation = 15,
+        xDeg = (xPercentage * maxRotation).toFixed(1)*-1,
+        yDeg = (yPercentage * maxRotation).toFixed(1)*-1,
+        transformRotate = `rotateY(${ xDeg }deg) rotateX(${ yDeg }deg)`
+
+    this.setState({transformRotate: transformRotate})
+    this.setState({blurMove: blurMove})
   }
 
   isHourBeingDragged() {
@@ -331,22 +344,45 @@ export class HourContainer extends React.Component {
   render() {
     let isHourActive = this.props.hoveredTiles.includes(this.props.hour)
     let isHighlighted = isHourActive ? styles.isHighlighted : null
+    const blurMoveStyles = {
+      transform: this.state.blurMove
+    };
     const mystyle = {
+      zIndex: 2,
+      position: "relative",
       transform: this.state.transformRotate
     };
     return(
       <div
         className={`${styles.hourContainer} ${ this.props.isDragging ? this.isHourBeingDragged() : null } ${isHighlighted}`}
-        ref={this.selector}
+
       >
         <div
           key={this.props.hour}
           onMouseDown={this.props.onMouseDown}
-          onMouseOver={this.props.onMouseOver}
+          onMouseOver= {
+            this.props.onMouseOver,
+            () => {
+              this.setState({isHover: true})
+            }
+          }
+          onMouseOut= {
+            () => {
+              this.setState({isHover: false})
+            }
+          }
           onMouseMove={this.onMouseMove}
           className={`${styles.hourPill} ${this.props.className} `}
-          style={mystyle}
+          style={this.state.isHover ? mystyle : null}
+          ref={this.selector}
         >
+          { this.state.isHover ? 
+            <div
+              className={`${styles.blurHighlight}`}
+              style={this.state.isHover ? blurMoveStyles : null}
+            />          
+            : null
+          }
           { !isHourActive ? <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> : <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> }
         </div>
       </div>

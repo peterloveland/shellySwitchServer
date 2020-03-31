@@ -1,9 +1,11 @@
 $pillWidth: 6rem;
 $pillSpacing: .5rem;
+$highlightSize: 80px;
 
 :export {
   pillWidth: $pillWidth;
   pillSpacing: $pillSpacing;
+  highlightSize: $highlightSize;
 }
 
 
@@ -12,6 +14,8 @@ $pillSpacing: .5rem;
   width: 100%;
   overflow: scroll;
   margin-top: var(--spacing-05);
+
+  padding-left: 2rem;
   
   -ms-overflow-style: none;
   position: relative;
@@ -38,17 +42,17 @@ $pillSpacing: .5rem;
   width: $pillWidth;
   padding-left: $pillSpacing/2;
   padding-right: $pillSpacing/2;
-  padding-bottom: 1rem;
+  padding-bottom: 2rem;
   padding-top: 1rem;
   user-select: none;
-  // transition: 0.1s;
-
+  
+  transition: .2s;
 
   &:hover {
     // a {
     //   font-weight: 700;
     // }
-    // transform: scale(1.07);
+    transform: scale(1.06);
     // transform: scale(2);
   }
   
@@ -75,7 +79,7 @@ $pillSpacing: .5rem;
 
 
 .tileIsHovered {
-  background: red;
+  // background: red;
 }
 
 
@@ -85,25 +89,53 @@ $pillSpacing: .5rem;
   height: 4rem;
   margin-top: 1.5rem;
   width: 100%;
+  position: relative;
+  overflow: hidden;
   // margin-left: $pillSpacing/2;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   // box-shadow: 0px 0px 38px 0px #ebebeb;
+  // transition: 0.05s
+  transition: .05s background;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+
   &:hover {
     background: var(--gray-20);
     cursor: pointer;
   }
   &.isActive {
-    background: red;
     margin-right: 0;
     margin-left: 0;
+  }
+  .blurHighlight {
+    width: $highlightSize;
+    height: $highlightSize;
+    background: white;
+    position: absolute;
+    left: $highlightSize * -0.5;
+    top: $highlightSize * -0.5;
+    content: " ";
+    filter: blur(10px);
+    opacity: .3;
+    display: block;
+    pointer-events: none;
+    z-index: 2;
+    border-radius: 10rem;
   }
 }
 
 .isHighlighted {
-  background: blue;
+  .hourPill {
+    background: var(--main-01);
+    .hourLabel {
+      color: white;
+    }
+    .blurHighlight {
+      background: var(--main-01--hover);
+    }
+  }
 }
 
 
@@ -112,6 +144,8 @@ $pillSpacing: .5rem;
   height: 1rem;
   font-size: 12px;
   color: rgb(65, 65, 65);
+  position: relative;
+  z-index: 3;
 }
 
 .groupContainer {
