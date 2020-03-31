@@ -355,35 +355,38 @@ export class HourContainer extends React.Component {
     return(
       <div
         className={`${styles.hourContainer} ${ this.props.isDragging ? this.isHourBeingDragged() : null } ${isHighlighted}`}
-
+        onMouseDown={this.props.onMouseDown}
+        onMouseOver= {
+          this.props.onMouseOver,
+          () => {
+            this.setState({isHover: true})
+          }
+        }
+        onMouseOut= {
+          () => {
+            this.setState({isHover: false})
+          }
+        }
       >
         <div
-          key={this.props.hour}
-          onMouseDown={this.props.onMouseDown}
-          onMouseOver= {
-            this.props.onMouseOver,
-            () => {
-              this.setState({isHover: true})
-            }
-          }
-          onMouseOut= {
-            () => {
-              this.setState({isHover: false})
-            }
-          }
-          onMouseMove={this.onMouseMove}
-          className={`${styles.hourPill} ${this.props.className} `}
-          style={this.state.isHover ? mystyle : null}
-          ref={this.selector}
+         className={`${styles.pillWrapper}`}
         >
-          { this.state.isHover ? 
-            <div
-              className={`${styles.blurHighlight}`}
-              style={this.state.isHover ? blurMoveStyles : null}
-            />          
-            : null
-          }
-          { !isHourActive ? <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> : <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> }
+          <div
+            key={this.props.hour}
+            onMouseMove={this.onMouseMove}
+            className={`${styles.hourPill} ${this.props.className} `}
+            style={this.state.isHover ? mystyle : null}
+            ref={this.selector}
+          >
+            { this.state.isHover ? 
+              <div
+                className={`${styles.blurHighlight}`}
+                style={this.state.isHover ? blurMoveStyles : null}
+              />          
+              : null
+            }
+            { !isHourActive ? <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> : <div className={`${styles.hourLabel}`}>{`${this.props.hour}:00`}</div> }
+          </div>
         </div>
       </div>
     )

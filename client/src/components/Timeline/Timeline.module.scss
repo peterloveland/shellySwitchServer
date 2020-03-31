@@ -35,25 +35,22 @@ $highlightSize: 80px;
 .hourContainer {
   scroll-snap-align: start;
   display: flex;
-  // border-left: 1px solid grey;
-  // padding-left: var(--spacing-04);
   text-align: left;
   flex-shrink: 0;
-  width: $pillWidth;
-  padding-left: $pillSpacing/2;
-  padding-right: $pillSpacing/2;
   padding-bottom: 2rem;
   padding-top: 1rem;
   user-select: none;
-  
-  transition: .2s;
-
+  cursor: pointer;
+  .pillWrapper {
+    transition: 0.2s;
+  }
   &:hover {
-    // a {
-    //   font-weight: 700;
-    // }
-    transform: scale(1.06);
-    // transform: scale(2);
+    .pillWrapper {
+      transform: scale(1.06);
+    }
+    .hourPill {
+      background: var(--gray-20);
+    }
   }
   
   &.isFirst {
@@ -65,6 +62,18 @@ $highlightSize: 80px;
     margin-right: var(--spacing-04);
     
     content: "isLast";
+  }
+
+  &.isHighlighted {
+    .hourPill {
+      background: var(--main-01);
+      .hourLabel {
+        color: white;
+      }
+      .blurHighlight {
+        background: var(--main-01--hover);
+      }
+    }
   }
 }
 
@@ -91,20 +100,18 @@ $highlightSize: 80px;
   width: 100%;
   position: relative;
   overflow: hidden;
+  width: $pillWidth;
   // margin-left: $pillSpacing/2;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  // box-shadow: 0px 0px 38px 0px #ebebeb;
-  // transition: 0.05s
   transition: .05s background;
+  transform-origin: center center;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  margin-left: $pillSpacing/2;
+  margin-right: $pillSpacing/2;
 
-  &:hover {
-    background: var(--gray-20);
-    cursor: pointer;
-  }
   &.isActive {
     margin-right: 0;
     margin-left: 0;
@@ -126,17 +133,7 @@ $highlightSize: 80px;
   }
 }
 
-.isHighlighted {
-  .hourPill {
-    background: var(--main-01);
-    .hourLabel {
-      color: white;
-    }
-    .blurHighlight {
-      background: var(--main-01--hover);
-    }
-  }
-}
+
 
 
 .hourLabel {
