@@ -1,0 +1,12 @@
+[
+  {
+    "name": "officeI3",
+    "overridden": false,
+    "states": [
+      { "state": 0 },
+      { "state": 1, "lights": [ { "id": "office1", "brightness": 10 } ] },
+      { "state": 2, "lights": [ { "id": "office1", "brightness": 50 } ] },
+      { "state": 3, "lights": [ { "id": "office1", "brightness": 100 } ] }
+    ]
+  }
+]
