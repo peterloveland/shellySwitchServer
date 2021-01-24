@@ -4,154 +4,183 @@ var mqtt = require('mqtt')
 var config = require('../data/appConfig.json');
 var rulesConfig = require('../data/motionRules.json');
 var defaultRules = require('../data/rulesDefault.json');
-const redis = require("redis");
-const redisClient = redis.createClient();
 var api = require('./api/api.js');
+var EventEmitter = require('events'); 
 
-redisClient.on('ready',function() {
- console.log("Redis is ready");
-});
 
-redisClient.on('error',function() {
- console.log("Error in Redis");
-});
+// let huejay = require('huejay');
+// let hueClient = new huejay.Client(config.hue);
+
 
 var client  = mqtt.connect(config.mqttServer)
+
+// hueClient.bridge.ping()
+//   .then(() => {
+//     console.log('Successful connection to bridge');
+//   })
+//   .catch(error => {
+//     console.log('Could not connect to bridge');
+//   });
+
+
+
+  // hueClient.lights.getAll()
+  //   .then(lights => {
+  //     for (let light of lights) {
+  //       // let previous = this.lights[light.uniqueId];
+  //       // this.lights[light.uniqueId] = light;
+  //       console.log(light)
+  //       // this.publishLight(previous, light);
+  //     }
+  //     // setTimeout(this.callback.bind(this), this.timeout);
+  //   })
+  //   .catch(error => {
+  //     console.log(`An error occurred: ${error.message}`);
+  //   });
+
 
 const allRooms = Object.keys(rulesConfig.rooms)
 
 client.on('connect', function () {
-  client.subscribe('zigbee2mqtt/#', function (err) {
+  client.subscribe(`${config.mqttBaseTopic}/+/input/0`, function (err) {
     console.log(`Subscribing to all ${config.mqttBaseTopic} topics`)
   })
-})
 
-client.on('message', function (topic, message) {  
-  // check which room the sensor is in
-  let roomID = whichRoom(topic)
-  // let roomLightsTimeout = 
-
-  if ( isOccupancyInJSON(message) && roomID ) { // if motion is detected and it's not already running a script
-    timeFrameCheck(roomID)
-  }
-})
-
-function isOccupancyInJSON(message) {
-  try {
-    let theMessage = JSON.parse(message.toString())
-    if(theMessage.hasOwnProperty("occupancy")) {
-      // return the value of 'occupancy' (probably true) 
-      return theMessage.occupancy
-    }
-  }
-  catch {
-    // not JSON
-    return false
-  }
-}
-
-function whichRoom(topic) {
-  let activeRoom
-  allRooms.forEach(roomID => { // loop through each room
-    let roomSensors = rulesConfig.rooms[roomID].sensors // get list of topics for each sensor in the room
-    roomSensors.forEach(sensorTopic => { // for each sensor
-      if ( topic === sensorTopic ) { // if the sensor topic matches the topic
-        activeRoom = roomID // then assign the activeRoom variable with the ID of the room
-      }
-    })
-  });
-  return activeRoom // and return it
-}
-
-function timeFrameCheck(roomID) {
-  redisClient.get(roomID,function(err,lastTriggered){ // check to see if a timestamp already exists for the current room
-    sendMessage(roomID,lastTriggered) // callback
-  }); 
-}
-
-let roomTimersArray = []    
-
-function sendMessage(roomID,lastTriggered) {
-
-  const room = rulesConfig.rooms[roomID] // store room as var
-  const timePeriods = room.timePeriods // get all the time periods associated with a room
-  let currentTime = Date.now()
-  const currentHour = new Date().getHours() // get the current time and store as an int
-
-  timePeriods.forEach( timePeriod => { // for each time period for the room
-    const start = timePeriod.start // store start
-    const end   = timePeriod.end // store end
-
-    ///////// COULD MAKE THE DEFAULTSWITCHOFFAFTRMINS VARIABLE. E.G. IF PAST 22:00 THEN BRIGHTNESS DEFAULT IS 10%. COULD
-    ///////// COULD STILL MAKE THIS WORK ONLY WHEN THE TIME ENTRY IS IN THE MOTIONRULES.JSON CONFIG, BUT WITHOUT A BRIGHTNESS
-    ///////// THIS MIGHT ALSO WORK FOR THE UI. E.G. WHEN SETTING UP A TIME YOU OPT INTO PROVIDING A BRIGHTNESS 
-
-    let switchOffAfter = (timePeriod.switchOffAfterMins || config.defaultSwitchOffAfterMins) * 60000 // convert mins to ms, default is 5 minutes (if not specified in JSON)
-    
-    if ( currentHour >= start && currentHour < end ) { // if current time between the start/end
-      let timeSinceLastTrigger = currentTime - lastTriggered
-      if ( timeSinceLastTrigger < 0 ) { // basically means the zigbee chip won't be spammed. Will only send movement once every 120 seconds.
-        console.log(`Motion detected in ${room.title} but no command is being sent`)
-        redisClient.set(`${roomID}`, currentTime );
-      } else {
-        if ( timePeriod.trigger ) { // if the trigger is set
-          room.lights.forEach(lightTopic => { // for each light 
-            console.log(`${room.title} triggered. Lights coming up`)
-            sendLightCommand(roomID,timePeriod,lightTopic,currentTime)
-          })
-        }
-        if ( timePeriod.roomTrigger ) { // if the roomTrigger is set
-          console.log(`Motion detected in ${roomID} but running motion against ${timePeriod.roomTrigger}`)
-          timeFrameCheck(timePeriod.roomTrigger)
-          return
-        }
-      }
-
-      if( roomID in roomTimersArray ) {
-        clearTimeout( roomTimersArray[roomID] )
-      }
-      roomTimersArray[roomID] = setTimeout( () => {
-        turnLightsOff(roomID)
-      } , switchOffAfter )
-
-    }
+  client.subscribe(`lights/hue/00:17:88:01:10:55:18:d4-0b/get/#`, function (err) {
+    console.log(`Subscribing to all hue topic`)
   })
   
-}
+})
 
-function turnLightsOff(roomID) {
-  const room = rulesConfig.rooms[roomID] // store room as var
-  room.lights.forEach(light => { // for each light 
-    client.publish(`${config.mqttBaseTopic}/${light}/set`, `{"state":"ON","brightness":0}`) // set the brightness
-  })
-}
+let shadowLights = []
+let shadowSwitches = []
 
-function sendLightCommand(roomID,timePeriod,lightTopic,currentTime) {
-  let brightness
-  if ( timePeriod.trigger.brightness ) { // if brightness has been set
-    brightness = timePeriod.trigger.brightness // use this value
-  } else { // if brightness hasn't been set
-    brightness = checkDefaultBrightness()
+let switchConfigMap = [
+  {
+    switchID: 0,
+    lights: [
+      "00:17:88:01:10:55:18:d4-0b"
+    ]
   }
-  client.publish(
-    `${config.mqttBaseTopic}/${lightTopic}/set`, // topic
-    `{"state":"ON","brightness":${ brightness  }}`, //message
-    [],
-    () => { 
-      redisClient.set(`${roomID}`, currentTime ) // callback
-    }
-  ) 
+]
+
+client.on('message', function (topic, message) {
+    
+  // if hue sends an update. Update the shadow lights to match the light status. Allows us to determine the action when the switch is toggled
+  if ( topic.match("lights/hue/.*/get/state" )) {
+    updateShadowLightState(`00:17:88:01:10:55:18:d4-0b`,message)
+  }
+
+  // if switch sends a command
+  if ( topic.match("shellies/.*/input/0" )) {
+    shouldSwitchTriggerAction("0",message)
+  }
+
+})
+
+
+const getShadowLightIndex = (id) => {
+  const objIndex = shadowLights.findIndex((light => light.id === id));
+  return objIndex
 }
 
-function checkDefaultBrightness() {
-  let brightness
-  defaultRules.timePeriodDefaults.forEach( defaultTimePeriod => { // for each time period for the room
-    const currentHour = new Date().getHours()
-    const start = defaultTimePeriod.start // store start
-    const end   = defaultTimePeriod.end // store end
-    if ( currentHour >= start && currentHour < end ) { // if current time between the start/end
-      brightness = defaultTimePeriod.brightness // store the default brightness as the brightness to be set
+const getShadowSwitchesIndex = (id) => {
+  const objIndex = shadowSwitches.findIndex((theSwitch => theSwitch.id === id));
+  return objIndex
+}
+
+
+const updateShadowLightState = (id,payload) => {
+  const objIndex = getShadowLightIndex(id)
+  payload = JSON.parse(payload.toString())
+
+  let brightness = convertToPercentage(payload.brightness)
+  let state = brightness === 0 ? false : payload.state
+
+  if ( objIndex !== -1 ) {
+    shadowLights[objIndex].brightness = +brightness
+    shadowLights[objIndex].state = state
+  } else {
+    shadowLights.push({
+      "id": id,
+      "brightness": +brightness,
+      "state": state
+    })
+  }
+
+  console.log(shadowLights)
+
+}
+
+
+
+const shouldSwitchTriggerAction = (id,payload) => {
+  const objIndex = getShadowSwitchesIndex(id);
+  let state = payload.toString()
+
+  if ( objIndex !== -1 ) { // if object already exists. Update it's state
+    if ( shadowSwitches[objIndex].state !== state ) { // check if the state is the same
+      shadowSwitches[objIndex].state = state // if it's not the same, update the state and trigger a toggle
+      switchTrigger.emit("toggle",{id});
     }
+  } else {
+    switchTrigger.emit("toggle",{id}); // if it doesn't exist, trigger the toggle
+    shadowSwitches.push({ // and add the new object to the array
+      "id": id,
+      "state": state
+    })
+  }
+
+}
+
+// set up event listener for when the switch state is changed (e.g. toggled)
+const switchTrigger = new EventEmitter();
+switchTrigger.on('toggle', (event) => switchStateChanged(event) ); // Register for eventOne
+
+function switchStateChanged(event) {
+    toggleLight(event.id)
+  //  console.log(`the switch ${event.id} was toggled`)
+}
+
+
+
+const toggleLight = (id) => {
+  let lights = getLightsAssociatedToSwitch(id)
+  lights.forEach( (light) => {
+    getLightStatus(light)
   })
-  return brightness || 100 // return the default brightness, unless it wasn't found (currentHour wasn't found between start/end) in which case return 100
+}
+
+const getLightsAssociatedToSwitch = (id) => {
+  const objIndex = switchConfigMap.findIndex((theSwitch => theSwitch.switchID === +id));
+  const allLights = switchConfigMap[objIndex].lights
+  return allLights
+}
+
+const getLightStatus = (id) => {
+  const objIndex = getShadowLightIndex(id)
+  const isLightOn = shadowLights[objIndex].state
+
+  if ( isLightOn ) {
+    // console.log("TURNING LIGHT OFF")
+    client.publish(
+      `lights/hue/00:17:88:01:10:55:18:d4-0b/set/on`, `false`
+    ) 
+  } else {
+    // console.log("TURNING LIGHT ON")
+    client.publish(
+      `lights/hue/00:17:88:01:10:55:18:d4-0b/set/on`, `true`
+    ) 
+    client.publish(
+      `lights/hue/00:17:88:01:10:55:18:d4-0b/set/brightness`, shadowLights[objIndex].brightness > 0 ? `${convertTo255(shadowLights[objIndex].brightness)}` : `${convertTo255(100)}`
+    ) 
+  }
+}
+
+const convertTo255 = (percentage) => {
+  return 255 * (percentage/100)
+}
+
+const convertToPercentage = (brightness) => {
+  return ((+brightness / 255) * 100).toFixed(0)
 }

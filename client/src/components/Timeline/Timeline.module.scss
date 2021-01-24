@@ -1,4 +1,4 @@
-$pillWidth: 6rem;
+$pillWidth: 5rem; // maybe try making these circles eventually?
 $pillSpacing: .5rem;
 $highlightSize: 80px;
 
@@ -46,10 +46,10 @@ $highlightSize: 80px;
   }
   &:hover {
     .pillWrapper {
-      transform: scale(1.06);
+      transform: scale(1.1);
     }
     .hourPill {
-      background: var(--gray-20);
+      background: rgb(245, 245, 245);
     }
   }
   
@@ -65,6 +65,9 @@ $highlightSize: 80px;
   }
 
   &.isHighlighted {
+    .pillWrapper {
+      // transform: scale(1.03);
+    }
     .hourPill {
       background: var(--main-01);
       .hourLabel {
@@ -93,7 +96,7 @@ $highlightSize: 80px;
 
 
 .hourPill {
-  background: var(--white);
+  background: #f7f7f7;
   border-radius: .75rem;
   height: 4rem;
   margin-top: 1.5rem;
@@ -119,7 +122,7 @@ $highlightSize: 80px;
   .blurHighlight {
     width: $highlightSize;
     height: $highlightSize;
-    background: white;
+    background: var(--white);
     position: absolute;
     left: $highlightSize * -0.5;
     top: $highlightSize * -0.5;

@@ -323,7 +323,7 @@ export class HourContainer extends React.Component {
     let maxRotation = 15,
         xDeg = (xPercentage * maxRotation).toFixed(1)*-1,
         yDeg = (yPercentage * maxRotation).toFixed(1)*-1,
-        transformRotate = `rotateY(${ xDeg }deg) rotateX(${ yDeg }deg)`
+        transformRotate = `rotateY(${ xDeg }deg) rotateX(${ yDeg/2 }deg) translateY(${((yDeg*-1)/20).toFixed(1)}px)`
 
     this.setState({transformRotate: transformRotate})
     this.setState({blurMove: blurMove})
