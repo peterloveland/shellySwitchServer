@@ -4,10 +4,11 @@ var mqtt = require('mqtt')
 var config = require('../data/appConfig.json');
 var rulesConfig = require('../data/motionRules.json');
 var lightStates = require('../data/lightStates.json');
-var defaultRules = require('../data/rulesDefault.json');
-var api = require('./api/api.js');
 var EventEmitter = require('events'); 
-const { timeStamp } = require('console');
+
+const fs = require('fs');
+const e = require('cors');
+
 
 
 // let huejay = require('huejay');
@@ -40,30 +41,18 @@ var client  = mqtt.connect(config.mqttServer)
   //   });
 
 
-const allRooms = Object.keys(rulesConfig.rooms)
 
 client.on('connect', function () {
-  client.subscribe(`${config.mqttBaseTopic}/+/#`, function (err) {
+  client.subscribe(`${config.mqttBaseTopic}/+/#`, function () {
     console.log(`Subscribing to all ${config.mqttBaseTopic} topics`)
   })
 
-  client.subscribe(`lights/hue/00:17:88:01:10:55:18:d4-0b/get/#`, function (err) {
+  client.subscribe(`lights/hue/00:17:88:01:10:55:18:d4-0b/get/#`, function () {
     console.log(`Subscribing to all hue topic`)
   })
   
 })
 
-let shadowLights = []
-let shadowSwitches = []
-
-let switchConfigMap = [
-  {
-    switchID: 0,
-    lights: [
-      "00:17:88:01:10:55:18:d4-0b"
-    ]
-  }
-]
 
 let shadowSwitchState = [
   { "name": "officeI3", "state": 0, "previousState": null, "previousCount": null }
@@ -74,14 +63,12 @@ client.on('message', function (topic, message) {
   // if hue sends an update. Update the shadow lights to match the light status. Allows us to determine the action when the switch is toggled
   if ( topic.match("lights/hue/.*/get/state" )) {
     setTimeout( () => {
-      updateShadowLightState(`00:17:88:01:10:55:18:d4-0b`,message)
+      // updateShadowState('light',`00:17:88:01:10:55:18:d4-0b`,message)
     },1000)
   }
 
   let switchMatch = topic.match("shellies/[.*]/input/0")
   let i3match = topic.match("shellies/(.*)/input_event/(.*)")
-
-  // console.log(topic)
 
   // if switch sends a command
   if ( switchMatch ) {
@@ -90,18 +77,20 @@ client.on('message', function (topic, message) {
   }
 
   if ( i3match ) {
+    // console.log("IS I3")
     let switchID = i3match[1]
     let switchNumber = i3match[2]
     let event = JSON.parse(message.toString())
-    setSwitchState(switchID, switchNumber, event)
+    updateShadowSwitchState(switchID, switchNumber, event)
   }
 
 })
 
 
 const getShadowLightIndex = (id) => {
-  const objIndex = shadowLights.findIndex((light => light.id === id));
-  return objIndex
+  let shadowState = getShadowState()
+  // console.log(shadowState)
+  // return objIndex
 }
 
 const getShadowSwitchesIndex = (id) => {
@@ -110,33 +99,22 @@ const getShadowSwitchesIndex = (id) => {
 }
 
 
-const updateShadowLightState = (id,payload) => {
-  const objIndex = getShadowLightIndex(id)
-  payload = JSON.parse(payload.toString())
+let shadowState
 
-  let brightness = convertToPercentage(payload.brightness)
-  let state = brightness === 0 ? false : payload.state
+const getShadowState = () => {
+  let shadowStateStore = fs.readFileSync('./data/state/shadowState.json')
 
-  if ( objIndex !== -1 ) {
-    if ( !timeOfLastSwitch || Date.now() - timeOfLastSwitch > 5000 ) { // this means that the command didn't come from the switch
-      shadowLights[objIndex].brightness = +brightness
-      shadowLights[objIndex].on = state
-      shadowLights[objIndex].overridden = true
-      console.log(shadowLights)
+  if(shadowStateStore) {
+    try {
+      shadowState = JSON.parse(shadowStateStore);
+    } catch(e) {
+      shadowState = {}
     }
-  } else {
-    shadowLights.push({
-      "id": id,
-      "brightness": +brightness,
-      "on": state,
-      "overridden": false
-    })
   }
-  
+
+  return shadowState
 
 }
-
-
 
 const shouldSwitchTriggerAction = (id,payload) => {
   const objIndex = getShadowSwitchesIndex(id);
@@ -157,8 +135,6 @@ const shouldSwitchTriggerAction = (id,payload) => {
 
 }
 
-let switchHasBeenTriggeredInTheLastSecond = false
-let timeOfLastSwitch
 // set up event listener for when the switch state is changed (e.g. toggled)
 const switchTrigger = new EventEmitter();
 switchTrigger.on('toggle', (event) => switchStateChanged(event) ); // Register for eventOne
@@ -169,8 +145,7 @@ function switchStateChanged(event) {
   //  console.log(`the switch ${event.id} was toggled`)
 }
 
-function switchWasTriggered(event) {
-  timeOfLastSwitch = Date.now()
+function switchWasTriggered() {
   // console.log(timeOfLastSwitch)
   // switchHasBeenTriggeredInTheLastSecond = true
   // console.log({switchHasBeenTriggeredInTheLastSecond})
@@ -219,109 +194,122 @@ const convertTo255 = (percentage) => {
   return (255 * (percentage/100)).toFixed(0)
 }
 
-const convertToPercentage = (brightness) => {
-  return ((+brightness / 255) * 100).toFixed(0)
-}
 
 
 
 
 
 // I3 SCRIPTS
-const setSwitchState = (switchID, switchNumber, payload) => {
-
-  const event = payload.event
-  const eventCount = payload.event_cnt
-  
-  const theSwitchIndex = shadowSwitchState.findIndex((theSwitch => theSwitch.name === switchID));
-  
-  const currentState = shadowSwitchState[theSwitchIndex].state
-  const previousState = shadowSwitchState[theSwitchIndex].previousState
-  const previousCount = shadowSwitchState[theSwitchIndex].previousCount
-  const theSwitchState = shadowSwitchState[theSwitchIndex]
-
-
-  if ( +switchNumber === 0 && previousCount !== eventCount ) {
-    
-    // console.log(switchID, switchNumber, payload)
-
-
-    if ( currentState !== 0 ) {
-      theSwitchState.previousState = currentState
-    }
-
-    switch( event ) {
-      case "S": // single press
-        if ( currentState === 0) {
-          theSwitchState.state = previousState ? previousState : 1
-        } else {
-          theSwitchState.state = 0
-        }
-        break;
-      case "SS": // double press
-        // go to the next state
-        theSwitchState.state = cycleThroughState(switchID,currentState)
-        break;
-      case "SSS": // triple press
-        break;
-      case "L": // long press
-        break;
-      case "SL": // short press + long press
-        break;
-      default: 
-        console.log(event)
-    }
-
-    theSwitchState.previousCount = eventCount
-
-    let newState = shadowSwitchState[theSwitchIndex].state
-    setLights(switchID,newState)
-
+const updateShadowSwitchState = (switchID, switchNumber, payload) => {
+  let allStates = JSON.parse(fs.readFileSync('./data/state/shadowState.json'))
+  let shadowSwitchState = allStates.shadowSwitchState
+  let switchIndex = getSwitchID(shadowSwitchState,switchID)
+  if ( switchIndex !== -1 ) {
+    // console.log(`Switch exists at ${switchIndex}`)
+    setSwitchNumberState(switchIndex, switchNumber, payload, switchID)
+  } else {
+    shadowSwitchState.push({
+      id: switchID,
+      switches: []
+    })
+    // console.log("Switch has been added")
+    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(allStates,null,2));
+    updateShadowSwitchState(switchID, switchNumber, payload) // rerun the function
   }
-  
 }
+
+const setSwitchNumberState = (switchIndex, switchNumber, payload, switchID) => {
+  let allStates = JSON.parse(fs.readFileSync('./data/state/shadowState.json'))
+  let allSwitches = allStates.shadowSwitchState[switchIndex].switches
+  theSwitch = getTheSwitches(allSwitches,switchNumber)
+  if ( theSwitch === -1 ) {
+    allSwitches.push({
+      "id": switchNumber,
+      "previousCount": null,
+      "state": 0
+    })
+    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(allStates,null,2));
+    setSwitchNumberState(switchIndex, switchNumber, payload, switchID)
+  } else {
+    let existingState = allSwitches[switchNumber].state
+    console.log(`Existing State: ${existingState}`)
+    theSwitch.previousCount = payload.event_cnt
+    if ( payload.event === "S" && existingState !== 0 ) {
+      theSwitch.cachedState = existingState
+    } else if (payload.event === "SS") {
+      delete theSwitch.cachedState
+    }
+    theSwitch.state = calculateSwitchState(switchID, allSwitches[switchNumber], switchNumber, payload, allSwitches[switchNumber].state)
+    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(allStates,null,2));
+  }
+}
+
+const calculateSwitchState = (switchID, theSwitch, switchNumber, payload, prev) => {
+  const cachedState = prev
+  const event = payload.event
+  const room = whichRoomIsSwitchIn(switchID)
+  let stateTotal
+  try {
+    stateTotal = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms.find( eachRoom => eachRoom.title === room ).switches.find( eachSwitch => eachSwitch.id === switchNumber).stateTotal
+  } catch(e) {
+    stateTotal = 1
+  }
+  if ( theSwitch.id === "0" ) { console.log({prev,theSwitch}) }
+
+  
+  switch ( event ) {
+    case "S":
+      return prev === 0 ? theSwitch.cachedState : 0
+    case "SS":
+      // console.log(cachedState + 1)
+      return cachedState + 1 > stateTotal ? 1 : cachedState + 1
+    default:
+      break;
+      
+  }
+}
+  
+
+const getSwitchID = (shadowSwitchState,switchID) => {
+  let theID 
+  try {
+    theID = shadowSwitchState.findIndex( (theSwitch) => theSwitch.id === switchID )
+  } catch(e) {
+    console.error(e)
+    return false
+  }
+  return theID
+}
+
+const getTheSwitches = (allSwitches,theSwitchNumber) => {
+  if ( Object.keys(allSwitches).length !== 0 && allSwitches.constructor !== Object ) { 
+    let theSwitch = allSwitches.find( theSwitch => theSwitch.id === theSwitchNumber)
+    if ( theSwitch ) {
+      return theSwitch
+    }
+  }
+  return -1
+  // console.log(theSwitch)
+}
+
+const whichRoomIsSwitchIn = (switchID) => {
+  let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json'))
+  allRooms = Object.values(allRooms.rooms)
+  for (var i = 0; i < allRooms.length; i++) {
+    let roomObj = allRooms[i]
+    // console.log(roomObj)
+    if ( roomObj.switch === switchID) {
+      return roomObj.title
+    }
+    return false
+  }
+}
+
 
 const cycleThroughState = (switchID, currentState) => {
   const theSwitchIndex = lightStates.findIndex((theSwitch => theSwitch.name === switchID));
   const allStates = lightStates[theSwitchIndex].states
   const numberOfStates = allStates.length
-  if ( currentState + 1 === numberOfStates ) { return 1 } else { return currentState + 1 } // at the top end of the states cycle back around to 1, OR just return the next state
+  if ( currentState + 1 === numberOfStates ) { return 1 } else { return currentState } // at the top end of the states cycle back around to 1, OR just return the next state
 }
 
-const setLights = (switchID,newState) => {
-
-  // to do WORK OUT IF ANY OF THE LIGHTS IN THE ROOM HAVE BEEN OVERRIDDEN. IF THEY HAVE AND ALL ARE OFF. GO TO THE NEXT STATE. IF THEY HAVEN'T GO TO THE NEXT STEATR
-  const theSwitchIndex = lightStates.findIndex((theSwitch => theSwitch.name === switchID));
-  const theLights = lightStates[theSwitchIndex].states.find( (state) => state.state === newState ).lights
-  
-  console.log(`setting to state: ${newState}`)
-
-  switchTrigger.emit("trigger"); // this is to register that the switch is going to perform a change. So we know that this isn't an override by the home app/siri
-  
-  if ( newState === 0 ) {
-    client.publish(
-      `lights/hue/00:17:88:01:10:55:18:d4-0b/set/on`, `false`
-    )
-  } else {
-    theLights.forEach( (light) => {    
-      const brightness = convertTo255(light.brightness).toString()
-      if ( brightness > 0 ) {
-        client.publish(
-          `lights/hue/00:17:88:01:10:55:18:d4-0b/set/on`, `true`
-          )
-          client.publish(
-            `lights/hue/00:17:88:01:10:55:18:d4-0b/set/brightness`, brightness
-            )
-          } else {
-            client.publish(
-              `lights/hue/00:17:88:01:10:55:18:d4-0b/set/on`, `false`
-              )
-            }
-            
-      const shadowIndex = shadowLights.findIndex( light => light.id === "00:17:88:01:10:55:18:d4-0b")
-      shadowLights[shadowIndex].overridden = false
-      console.log(shadowLights)
-
-    })
-  }
-}
