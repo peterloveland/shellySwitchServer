@@ -222,6 +222,7 @@ const setSwitchNumberState = (switchIndex, switchNumber, payload, switchID) => {
   let allStates = JSON.parse(fs.readFileSync('./data/state/shadowState.json'))
   let allSwitches = allStates.shadowSwitchState[switchIndex].switches
   theSwitch = getTheSwitches(allSwitches,switchNumber)
+  if (theSwitch.previousCount === payload.event_cnt) { console.log("no change. not updating"); return false}
   if ( theSwitch === -1 ) {
     allSwitches.push({
       "id": switchNumber,
@@ -254,14 +255,11 @@ const calculateSwitchState = (switchID, theSwitch, switchNumber, payload, prev) 
   } catch(e) {
     stateTotal = 1
   }
-  if ( theSwitch.id === "0" ) { console.log({prev,theSwitch}) }
 
-  
   switch ( event ) {
     case "S":
       return prev === 0 ? theSwitch.cachedState : 0
     case "SS":
-      // console.log(cachedState + 1)
       return cachedState + 1 > stateTotal ? 1 : cachedState + 1
     default:
       break;
