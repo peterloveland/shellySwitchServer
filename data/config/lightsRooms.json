@@ -6,12 +6,13 @@
       "switches": [
         {
           "id": "0",
-          "stateTotal": 5
+          "stateTotal": 6,
+          "topic": "peter/test/1"
         }
       ]
     },
     {
-      "title": "Lounge",
+      "title": "lounge",
       "switch": "loungeI3",
       "lights": [
         {

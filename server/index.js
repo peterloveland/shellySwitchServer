@@ -98,12 +98,10 @@ const getShadowSwitchesIndex = (id) => {
   return objIndex
 }
 
-
 let shadowState
 
 const getShadowState = () => {
   let shadowStateStore = fs.readFileSync('./data/state/shadowState.json')
-
   if(shadowStateStore) {
     try {
       shadowState = JSON.parse(shadowStateStore);
@@ -111,7 +109,6 @@ const getShadowState = () => {
       shadowState = {}
     }
   }
-
   return shadowState
 
 }
@@ -138,24 +135,11 @@ const shouldSwitchTriggerAction = (id,payload) => {
 // set up event listener for when the switch state is changed (e.g. toggled)
 const switchTrigger = new EventEmitter();
 switchTrigger.on('toggle', (event) => switchStateChanged(event) ); // Register for eventOne
-switchTrigger.on('trigger', () => switchWasTriggered() ); // Register for eventOne
 
 function switchStateChanged(event) {
     toggleLight(event.id)
   //  console.log(`the switch ${event.id} was toggled`)
 }
-
-function switchWasTriggered() {
-  // console.log(timeOfLastSwitch)
-  // switchHasBeenTriggeredInTheLastSecond = true
-  // console.log({switchHasBeenTriggeredInTheLastSecond})
-  // setTimeout( () => {
-  //   switchHasBeenTriggeredInTheLastSecond = false
-  //   console.log({switchHasBeenTriggeredInTheLastSecond})
-  // },3000) // 3 seconds to allow the light to update the shadow without it being considered an override
-}
-
-
 
 const toggleLight = (id) => {
   let lights = getLightsAssociatedToSwitch(id)
@@ -222,7 +206,9 @@ const setSwitchNumberState = (switchIndex, switchNumber, payload, switchID) => {
   let allStates = JSON.parse(fs.readFileSync('./data/state/shadowState.json'))
   let allSwitches = allStates.shadowSwitchState[switchIndex].switches
   theSwitch = getTheSwitches(allSwitches,switchNumber)
-  if (theSwitch.previousCount === payload.event_cnt) { console.log("no change. not updating"); return false}
+  if (theSwitch.previousCount === payload.event_cnt) { // the Shellys seem to send repeat values every few seconds... if no change in the event_cnt, don't update.
+    return false
+  }
   if ( theSwitch === -1 ) {
     allSwitches.push({
       "id": switchNumber,
@@ -256,15 +242,21 @@ const calculateSwitchState = (switchID, theSwitch, switchNumber, payload, prev) 
     stateTotal = 1
   }
 
+  let newState
   switch ( event ) {
     case "S":
-      return prev === 0 ? theSwitch.cachedState : 0
-    case "SS":
-      return cachedState + 1 > stateTotal ? 1 : cachedState + 1
-    default:
+      newState = prev === 0 ? theSwitch.cachedState : 0
       break;
-      
+    case "SS":
+      newState = cachedState + 1 > stateTotal ? 1 : cachedState + 1
+      break;
+    default:
+      newState = 0
+      break;
   }
+
+  sendStateCommand(switchID, switchNumber, newState)
+  return newState
 }
   
 
@@ -287,7 +279,6 @@ const getTheSwitches = (allSwitches,theSwitchNumber) => {
     }
   }
   return -1
-  // console.log(theSwitch)
 }
 
 const whichRoomIsSwitchIn = (switchID) => {
@@ -303,6 +294,33 @@ const whichRoomIsSwitchIn = (switchID) => {
   }
 }
 
+const getSwitchesForRoom = (room) => {
+  console.log(room)
+  let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms
+  const allSwitchesForRoom = allRooms.find( eachRoom => eachRoom.title === room).switches
+  return allSwitchesForRoom
+  // console.log(allSwitchesForRoom.find( room => room.title === room))
+}
+
+const getSwitchNumberForSwitches = (allSwitches,switchNumber) => {
+  return allSwitches.find( eachSwitch => eachSwitch.id === switchNumber )
+}
+
+const sendStateCommand = (switchID, switchNumber, newState) => {
+  const topic = getSwitchTopic(switchID, switchNumber, newState)
+  let payload = calculatePayload(newState)
+  let theTopic = `${topic.room}/${topic.switchNumber}/${payload.group}`
+  console.log(theTopic)
+  client.publish(
+    `${theTopic}`, `${payload.value}`
+  ) 
+}
+
+const calculatePayload = (state) => {
+  let group = Math.floor(+state/3)
+  let value = state - (group * 3)
+  return {group,value}
+}
 
 const cycleThroughState = (switchID, currentState) => {
   const theSwitchIndex = lightStates.findIndex((theSwitch => theSwitch.name === switchID));
@@ -311,3 +329,11 @@ const cycleThroughState = (switchID, currentState) => {
   if ( currentState + 1 === numberOfStates ) { return 1 } else { return currentState } // at the top end of the states cycle back around to 1, OR just return the next state
 }
 
+const getSwitchTopic = (switchID, switchNumber, state) => {
+  const room = whichRoomIsSwitchIn(switchID)
+  const allSwitches = getSwitchesForRoom(room)
+  const theSwitch = getSwitchNumberForSwitches(allSwitches,switchNumber)
+  theSwitch.room = room
+  theSwitch.switchNumber = switchNumber
+  return theSwitch
+}

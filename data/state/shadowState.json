@@ -8,12 +8,14 @@
       "switches": [
         {
           "id": "0",
-          "previousCount": 1759,
-          "state": 3
+          "previousCount": 1970,
+          "state": 1,
+          "cachedState": 1
         },
         {
           "id": "1",
-          "previousCount": 0
+          "previousCount": 0,
+          "state": 0
         },
         {
           "id": "2",
