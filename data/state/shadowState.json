@@ -1,15 +1,13 @@
 {
-  "shadowSwitchState": [
-    {
-      "id": "loungeI3"
-    },
+  "shadowState": [
     {
       "id": "officeI3",
       "switches": [
         {
           "id": "0",
-          "previousCount": 39,
-          "state": 2
+          "previousCount": 59,
+          "state": 1,
+          "cachedState": 1
         },
         {
           "id": "1",
@@ -24,6 +22,37 @@
       ]
     }
   ],
-  "shadowRoomState": {},
-  "shadowLightState": {}
+  "rooms": [
+    {
+      "title": "office",
+      "override": null,
+      "switches": [
+        {
+          "title": "officeI3",
+          "triggers": [
+            {
+              "id": "0",
+              "state": 0,
+              "previousCount": null
+            },
+            {
+              "id": "1",
+              "state": 0,
+              "previousCount": null
+            }
+          ]
+        },
+        {
+          "title": "officeI222",
+          "triggers": [
+            {
+              "id": "2",
+              "state": 0,
+              "previousCount": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }

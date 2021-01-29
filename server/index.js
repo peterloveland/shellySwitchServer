@@ -35,7 +35,7 @@ client.on('message', function (topic, message) {
     let switchID = i3match[1]
     let switchNumber = i3match[2]
     let event = JSON.parse(message.toString())
-    updateShadowSwitchState(switchID, switchNumber, event)
+    updateshadowState(switchID, switchNumber, event)
   }
   
   if ( homekitOverrideMatch ) {
@@ -48,20 +48,6 @@ client.on('message', function (topic, message) {
 const getShadowSwitchesIndex = (id) => {
   const objIndex = shadowSwitches.findIndex((theSwitch => theSwitch.id === id));
   return objIndex
-}
-
-let shadowState
-
-const getShadowState = () => {
-  let shadowStateStore = fs.readFileSync('./data/state/shadowState.json')
-  if(shadowStateStore) {
-    try {
-      shadowState = JSON.parse(shadowStateStore);
-    } catch(e) {
-      shadowState = {}
-    }
-  }
-  return shadowState
 }
 
 const shouldSwitchTriggerAction = (id,payload) => {
@@ -131,31 +117,126 @@ const convertTo255 = (percentage) => {
 
 
 
-
+const runOnStartup = () => {
+  shadowRoomSync() // goes through the configured rooms and makes sure they're in the state, this should also copy across any existing state if room is already in the shadow state.
+}
 
 
 // I3 SCRIPTS
-const updateShadowSwitchState = (switchID, switchNumber, payload) => {
-  let allStates = JSON.parse(fs.readFileSync('./data/state/shadowState.json'))
-  let shadowSwitchState = allStates.shadowSwitchState
-  let switchIndex = getSwitchID(shadowSwitchState,switchID)
-  if ( switchIndex !== -1 ) {
-    // console.log(`Switch exists at ${switchIndex}`)
-    setSwitchNumberState(switchIndex, switchNumber, payload, switchID)
-  } else {
-    shadowSwitchState.push({
-      id: switchID,
-      switches: []
-    })
-    // console.log("Switch has been added")
-    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(allStates,null,2));
-    updateShadowSwitchState(switchID, switchNumber, payload) // rerun the function
+
+
+
+const updateshadowState = (switchID, switchNumber, payload) => {
+  // let shadowState = JSON.parse(fs.readFileSync('./data/state/shadowState.json')).shadowState
+  // let switchIndex = getSwitchID(shadowState,switchID)
+  // if ( switchIndex !== -1 ) {
+  //   // console.log(`Switch exists at ${switchIndex}`)
+  //   setSwitchNumberState(switchIndex, switchNumber, payload, switchID)
+  // } else {
+  //   shadowState.push({
+  //     id: switchID,
+  //     switches: []
+  //   })
+  //   // console.log("Switch has been added")
+  //   fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(allStates,null,2));
+  //   updateshadowState(switchID, switchNumber, payload) // rerun the function
+  // }
+}
+
+const getShadowState = () => {
+  return JSON.parse(fs.readFileSync('./data/state/shadowState.json', 'utf8'))
+}
+
+const shadowRoomSync = () => {
+  let shadowState = getShadowState()
+  if ( shadowState.rooms === undefined) {
+    // the rooms array doesn't exist. So make it
+    shadowState.rooms = []
+    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState,null,2));
+    shadowRoomSync() // rerun
   }
+
+  let allRegisteredRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json', 'utf8')).rooms
+  allRegisteredRooms.forEach((room)=> {
+    let roomIndexInShadow = shadowState.rooms.findIndex( (eachRoom) => eachRoom.title === room.title)
+    console.log(roomIndexInShadow)
+    if ( roomIndexInShadow === -1 ) {
+      shadowState.rooms.push({
+        "title": room.title
+      })
+      fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState,null,2));
+      shadowRoomSync() // rerun
+    } else {
+      const roomObj = shadowState.rooms[roomIndexInShadow]
+      roomObj.title     = roomObj.title || room.title // this should never be needed but in here for good measure
+      roomObj.override  = roomObj.override || null // if an override has already been set, use that, if not, use null
+      roomObj.switches  = getLightSwitches(room.title, roomObj)
+      fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState,null,2));
+    }
+  })
+}
+
+const getLightSwitches = (roomTitle, shadowRoomState) => {
+  let roomSwitches = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json', 'utf8')).rooms.find((room)=>room.title === roomTitle).switches
+  
+  let switchArray
+
+  let existingSwitches = shadowRoomState.switches
+
+  if ( existingSwitches === undefined ) {
+    switchArray = []
+  } else {
+    switchArray = existingSwitches
+  }
+
+  roomSwitches.forEach((eachSwitch) => {
+    let switchIndex = switchArray.findIndex((eachExistingSwitch) => eachExistingSwitch.title === eachSwitch.title)
+    if ( switchIndex === -1 ) {
+      // if switchArray can't find a switch with the same title... add it
+      switchArray.push({
+        "title": eachSwitch.title,
+        "triggers": getTriggers(eachSwitch.triggers,switchArray[switchIndex])
+      })
+    } else {
+      switchArray[switchIndex].triggers = getTriggers(eachSwitch.triggers,switchArray[switchIndex])
+    }
+  })
+  return switchArray
+}
+
+const getTriggers = (registeredTriggers,switchShadow) => {
+  console.log(registeredTriggers)
+
+  let shadowTrigger = switchShadow.triggers ? switchShadow.triggers : []
+  
+  
+  let triggerArray = []
+  registeredTriggers.forEach( (trigger) => {
+
+    let existingShadowIndex = shadowTrigger.findIndex( shadowTrigger => shadowTrigger.id === trigger.id )
+    let existingState = 0
+    let existingCount = null
+    let cachedState
+    if ( existingShadowIndex !== -1) {
+      existingState = shadowTrigger[existingShadowIndex].state || 0 // if state is found, use that (if state isn't valid then use 0 as backup)
+      existingCount = shadowTrigger[existingShadowIndex].previousCount || null // if previousCount is found, use that (if state isn't valid then use 0 as backup)
+      cachedState = shadowTrigger[existingShadowIndex].cachedState || false
+    }
+    triggerArray.push({
+      "id": trigger.id,
+      "state": existingState,
+      "previousCount": existingCount
+    })
+    if ( cachedState ) { // probably a bit overkill for such an edge case but if the cached state already exists then may aswell push that too
+      triggerArray[0].cachedState = cachedState
+    }
+  })
+  return triggerArray
 }
 
 const setSwitchNumberState = (switchIndex, switchNumber, payload, switchID) => {
   let allStates = JSON.parse(fs.readFileSync('./data/state/shadowState.json'))
-  let allSwitches = allStates.shadowSwitchState[switchIndex].switches
+  let allSwitches = allStates.shadowState[switchIndex].switches
   theSwitch = getTheSwitches(allSwitches,switchNumber)
   if (theSwitch.previousCount === payload.event_cnt) { // the Shellys seem to send repeat values every few seconds... if no change in the event_cnt, don't update.
     return false
@@ -211,10 +292,10 @@ const calculateSwitchState = (switchID, theSwitch, switchNumber, payload, prev) 
 }
   
 
-const getSwitchID = (shadowSwitchState,switchID) => {
+const getSwitchID = (shadowState,switchID) => {
   let theID 
   try {
-    theID = shadowSwitchState.findIndex( (theSwitch) => theSwitch.id === switchID )
+    theID = shadowState.findIndex( (theSwitch) => theSwitch.id === switchID )
   } catch(e) {
     console.error(e)
     return false
@@ -289,5 +370,10 @@ const getSwitchTopic = (switchID, switchNumber, state) => {
 }
 
 const receivedHomekitOverride = (id,message,timestamp) => {
-  console.log({id,message,timestamp})
+  // console.log({id,message,timestamp})
 }
+
+
+
+
+runOnStartup();

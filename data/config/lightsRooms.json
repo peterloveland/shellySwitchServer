@@ -2,26 +2,35 @@
   "rooms": [
     {
       "title": "office",
-      "switch": "officeI3",
       "homekitOverrideTopic": {
         "off": "officeIsOff",
         "on": "officeIsOn"
       },
       "switches": [
         {
-          "id": "0",
-          "stateTotal": 2,
-          "topic": "shellies/officeI3/input/0"
-        }
-      ]
-    },
-    {
-      "title": "lounge",
-      "switch": "loungeI3",
-      "lights": [
+          "title": "officeI3",
+          "triggers": [
+            {
+              "id": "0",
+              "stateTotal": 2,
+              "topic": "shellies/officeI3/input/0"
+            },
+            {
+              "id": "1",
+              "stateTotal": 2,
+              "topic": "shellies/officeI3/input/1"
+            }
+          ]
+        },
         {
-          "label": "lounge1",
-          "mac": "00-00-0-0-0-0-0-0-0"
+          "title": "officeI222",
+          "triggers": [
+            {
+              "id": "2",
+              "stateTotal": 2,
+              "topic": "shellies/officeI22223/input/0"
+            }
+          ]
         }
       ]
     }
