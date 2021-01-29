@@ -1,27 +1,4 @@
 {
-  "shadowState": [
-    {
-      "id": "officeI3",
-      "switches": [
-        {
-          "id": "0",
-          "previousCount": 59,
-          "state": 1,
-          "cachedState": 1
-        },
-        {
-          "id": "1",
-          "previousCount": 0,
-          "state": 0
-        },
-        {
-          "id": "2",
-          "previousCount": 0,
-          "state": 0
-        }
-      ]
-    }
-  ],
   "rooms": [
     {
       "title": "office",
@@ -29,24 +6,26 @@
       "switches": [
         {
           "title": "officeI3",
-          "triggers": [
+          "inputs": [
             {
-              "id": "0",
-              "state": 0,
-              "previousCount": null
+              "inputNumber": "0",
+              "state": 1,
+              "previousCount": 115,
+              "cachedState": 5
             },
             {
-              "id": "1",
+              "inputNumber": "1",
               "state": 0,
-              "previousCount": null
+              "previousCount": 0,
+              "cachedState": 0
             }
           ]
         },
         {
           "title": "officeI222",
-          "triggers": [
+          "inputs": [
             {
-              "id": "2",
+              "inputNumber": "2",
               "state": 0,
               "previousCount": null
             }

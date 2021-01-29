@@ -9,24 +9,24 @@
       "switches": [
         {
           "title": "officeI3",
-          "triggers": [
+          "inputs": [
             {
-              "id": "0",
-              "stateTotal": 2,
-              "topic": "shellies/officeI3/input/0"
+              "inputNumber": "0",
+              "stateTotal": 5,
+              "topic": "peterSwitch/office/0"
             },
             {
-              "id": "1",
+              "inputNumber": "1",
               "stateTotal": 2,
-              "topic": "shellies/officeI3/input/1"
+              "topic": "peterSwitch/office/1"
             }
           ]
         },
         {
           "title": "officeI222",
-          "triggers": [
+          "inputs": [
             {
-              "id": "2",
+              "inputNumber": "2",
               "stateTotal": 2,
               "topic": "shellies/officeI22223/input/0"
             }

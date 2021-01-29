@@ -4,6 +4,7 @@ var mqtt = require('mqtt')
 var config = require('../data/appConfig.json');
 var EventEmitter = require('events'); 
 const fs = require('fs');
+const e = require('cors');
 
 var client  = mqtt.connect(config.mqttServer)
 
@@ -33,9 +34,9 @@ client.on('message', function (topic, message) {
 
   if ( i3match ) {
     let switchID = i3match[1]
-    let switchNumber = i3match[2]
+    let inputNumber = i3match[2]
     let event = JSON.parse(message.toString())
-    updateshadowState(switchID, switchNumber, event)
+    updateshadowState(switchID, inputNumber, event)
   }
   
   if ( homekitOverrideMatch ) {
@@ -126,21 +127,25 @@ const runOnStartup = () => {
 
 
 
-const updateshadowState = (switchID, switchNumber, payload) => {
-  // let shadowState = JSON.parse(fs.readFileSync('./data/state/shadowState.json')).shadowState
-  // let switchIndex = getSwitchID(shadowState,switchID)
-  // if ( switchIndex !== -1 ) {
-  //   // console.log(`Switch exists at ${switchIndex}`)
-  //   setSwitchNumberState(switchIndex, switchNumber, payload, switchID)
-  // } else {
-  //   shadowState.push({
-  //     id: switchID,
-  //     switches: []
-  //   })
-  //   // console.log("Switch has been added")
-  //   fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(allStates,null,2));
-  //   updateshadowState(switchID, switchNumber, payload) // rerun the function
-  // }
+const updateshadowState = (switchID, inputNumber, payload) => {
+  let shadowState = getShadowState()
+  let room = whichRoomIsSwitchIn(switchID)
+  let allSwitchesInRoom = shadowState.rooms.find( eachRoom => eachRoom.title === room ).switches
+  let allInputsForSwitch = allSwitchesInRoom.find( eachSwitch => eachSwitch.title === switchID).inputs
+  let theInput = allInputsForSwitch.find(input => input.inputNumber === inputNumber )
+  if ( theInput ) {
+    let theNewState = calculateSwitchState(switchID, inputNumber, theInput, payload)
+    if ( theNewState ) {  // theNewState could return false if the event_count is duplicated
+      theInput.state = theNewState.state
+      theInput.previousCount = theNewState.updatedCount
+      if ( typeof theNewState.cachedState === "number" ) {
+        theInput.cachedState = theNewState.cachedState
+      }
+    }
+  } else {
+    // console.log(`dont' recognise this input ${inputNumber}. Needs to be registered in lightsRooms.json`)
+  }
+  fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState,null,2));
 }
 
 const getShadowState = () => {
@@ -195,10 +200,10 @@ const getLightSwitches = (roomTitle, shadowRoomState) => {
       // if switchArray can't find a switch with the same title... add it
       switchArray.push({
         "title": eachSwitch.title,
-        "triggers": getTriggers(eachSwitch.triggers,switchArray[switchIndex])
+        "inputs": getTriggers(eachSwitch.inputs,switchArray[switchIndex])
       })
     } else {
-      switchArray[switchIndex].triggers = getTriggers(eachSwitch.triggers,switchArray[switchIndex])
+      switchArray[switchIndex].inputs = getTriggers(eachSwitch.inputs,switchArray[switchIndex])
     }
   })
   return switchArray
@@ -207,13 +212,13 @@ const getLightSwitches = (roomTitle, shadowRoomState) => {
 const getTriggers = (registeredTriggers,switchShadow) => {
   console.log(registeredTriggers)
 
-  let shadowTrigger = switchShadow.triggers ? switchShadow.triggers : []
+  let shadowTrigger = switchShadow.inputs ? switchShadow.inputs : []
   
   
   let triggerArray = []
   registeredTriggers.forEach( (trigger) => {
 
-    let existingShadowIndex = shadowTrigger.findIndex( shadowTrigger => shadowTrigger.id === trigger.id )
+    let existingShadowIndex = shadowTrigger.findIndex( shadowTrigger => shadowTrigger.inputNumber === trigger.inputNumber )
     let existingState = 0
     let existingCount = null
     let cachedState
@@ -223,7 +228,7 @@ const getTriggers = (registeredTriggers,switchShadow) => {
       cachedState = shadowTrigger[existingShadowIndex].cachedState || false
     }
     triggerArray.push({
-      "id": trigger.id,
+      "inputNumber": trigger.inputNumber,
       "state": existingState,
       "previousCount": existingCount
     })
@@ -234,94 +239,62 @@ const getTriggers = (registeredTriggers,switchShadow) => {
   return triggerArray
 }
 
-const setSwitchNumberState = (switchIndex, switchNumber, payload, switchID) => {
-  let allStates = JSON.parse(fs.readFileSync('./data/state/shadowState.json'))
-  let allSwitches = allStates.shadowState[switchIndex].switches
-  theSwitch = getTheSwitches(allSwitches,switchNumber)
-  if (theSwitch.previousCount === payload.event_cnt) { // the Shellys seem to send repeat values every few seconds... if no change in the event_cnt, don't update.
+
+
+const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
+
+  if ( existing.previousCount === payload.event_cnt) {
+    // console.log("is repeated state. Don't update")
     return false
   }
-  if ( theSwitch === -1 ) {
-    allSwitches.push({
-      "id": switchNumber,
-      "previousCount": null,
-      "state": 0
-    })
-    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(allStates,null,2));
-    setSwitchNumberState(switchIndex, switchNumber, payload, switchID)
-  } else {
-    let existingState = allSwitches[switchNumber].state
-    // console.log(`Existing State: ${existingState}`)
-    theSwitch.previousCount = payload.event_cnt
-    if ( payload.event === "S" && existingState !== 0 ) {
-      theSwitch.cachedState = existingState
-    } else if (payload.event === "SS") {
-      delete theSwitch.cachedState
-    }
-    theSwitch.state = calculateSwitchState(switchID, allSwitches[switchNumber], switchNumber, payload, allSwitches[switchNumber].state)
-    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(allStates,null,2));
-  }
-}
 
-const calculateSwitchState = (switchID, theSwitch, switchNumber, payload, prev) => {
-  const cachedState = prev
+  const oldState = existing.state
   const event = payload.event
-  const room = whichRoomIsSwitchIn(switchID)
-  let stateTotal
-  try {
-    stateTotal = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms.find( eachRoom => eachRoom.title === room ).switches.find( eachSwitch => eachSwitch.id === switchNumber).stateTotal
-  } catch(e) {
-    stateTotal = 1
-  }
+  let stateTotal = getStateTotalCount(switchID,inputNumber)
 
   let newState
   switch ( event ) {
     case "S":
-      newState = prev === 0 ? theSwitch.cachedState : 0
+      if ( oldState === 0) {
+        newState = existing.cachedState || 1
+      } else {
+        newState = 0
+      }
       break;
     case "SS":
-      newState = cachedState + 1 > stateTotal ? 1 : cachedState + 1
+      newState = oldState + 1 > stateTotal ? 1 : oldState + 1
       break;
     default:
       newState = 0
       break;
   }
 
-  sendStateCommand(switchID, switchNumber, newState)
-  return newState
+  sendStateCommand(switchID, inputNumber, newState)
+  return {"state":newState,"cachedState":oldState,"updatedCount":payload.event_cnt}
 }
   
+const getStateTotalCount = (switchID,inputNumber) => {
+  const room = whichRoomIsSwitchIn(switchID)
 
-const getSwitchID = (shadowState,switchID) => {
-  let theID 
-  try {
-    theID = shadowState.findIndex( (theSwitch) => theSwitch.id === switchID )
-  } catch(e) {
-    console.error(e)
-    return false
-  }
-  return theID
-}
-
-const getTheSwitches = (allSwitches,theSwitchNumber) => {
-  if ( Object.keys(allSwitches).length !== 0 && allSwitches.constructor !== Object ) { 
-    let theSwitch = allSwitches.find( theSwitch => theSwitch.id === theSwitchNumber)
-    if ( theSwitch ) {
-      return theSwitch
-    }
-  }
-  return -1
+  const allSwitches = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms.find( eachRoom => eachRoom.title === room ).switches
+  const allInputs = allSwitches.find( eachSwitch => eachSwitch.title === switchID).inputs
+  console.log({allInputs})
+  const theStateTotal = allInputs.find( eachInput => eachInput.inputNumber === inputNumber).stateTotal || 1
+  return theStateTotal
 }
 
 const whichRoomIsSwitchIn = (switchID) => {
   let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json'))
   allRooms = Object.values(allRooms.rooms)
   for (var i = 0; i < allRooms.length; i++) {
-    let roomObj = allRooms[i]
-    if ( roomObj.switch === switchID) {
-      return roomObj.title
+    let switches = allRooms[i].switches
+    for (var i = 0; i < switches.length; i++) {
+      if ( switches[i].title === switchID) {
+        return allRooms[i].title
+      } else {
+        console.log(`no match`)
+      }
     }
-    return false
   }
 }
 
@@ -331,26 +304,27 @@ const getSwitchesForRoom = (room) => {
   return allSwitchesForRoom
 }
 
-const getSwitchNumberForSwitches = (allSwitches,switchNumber) => {
-  let theSwitch = allSwitches.find( eachSwitch => eachSwitch.id === switchNumber )
-  if ( theSwitch ) {
-    return theSwitch
+const getInputsForSwitch = (allSwitches,switchID) => {
+  let theInputs = allSwitches.find( eachSwitch => eachSwitch.title === switchID ).inputs
+  if ( theInputs ) {
+    return theInputs
   } else 
-    console.log(`a switch with the id ${switchNumber} has not yet been registered. Add to lightsRooms.json`)
+    console.log(`a switch with the id ${switchID} has not yet been registered. Add to lightsRooms.json`)
     return false
 }
 
-const sendStateCommand = (switchID, switchNumber, newState) => {
-  const topic = getSwitchTopic(switchID, switchNumber, newState)
-  if ( topic ) { // if a topic was found for the switch ID (if it wasn't then it might be you need to register one in lightrooms.json with the ID of the switch number)
+const sendStateCommand = (switchID, inputNumber, newState) => {
+  // when the number of states is over 2 (+ the first state === 3) multiple homekit switches are needed. This divides up the payload to add a group which equates to one of those homekit switches
+  const baseTopic = getSwitchTopic(switchID, inputNumber, newState)
+  if ( baseTopic ) {
     let payload = calculatePayload(newState)
-    let theTopic = `${topic.room}/${topic.switchNumber}/${payload.group}`
-    console.log(`Sending updated state value to: ${theTopic}`)
+    let topic = `${baseTopic}/${payload.group}`
+    console.log(`Sending "${payload.value}" value to: ${topic}`)
     client.publish(
-      `${theTopic}`, `${payload.value}`
+      `${topic}`, `${payload.value}`
     ) 
   } else {
-    console.error(`No topic found for ${switchID}:${switchNumber}`)
+    console.error(`No topic found for ${switchID}:${inputNumber}`)
   }
 }
 
@@ -360,13 +334,12 @@ const calculatePayload = (state) => {
   return {group,value}
 }
 
-const getSwitchTopic = (switchID, switchNumber, state) => {
+const getSwitchTopic = (switchID, inputNumber, state) => {
   const room = whichRoomIsSwitchIn(switchID)
   const allSwitches = getSwitchesForRoom(room)
-  const theSwitch = getSwitchNumberForSwitches(allSwitches,switchNumber)
-  theSwitch.room = room
-  theSwitch.switchNumber = switchNumber
-  return theSwitch
+  const allInputs = getInputsForSwitch(allSwitches,switchID)
+  const theTopic = allInputs.find(input => input.inputNumber === inputNumber).topic
+  return theTopic
 }
 
 const receivedHomekitOverride = (id,message,timestamp) => {
