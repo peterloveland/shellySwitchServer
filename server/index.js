@@ -4,7 +4,7 @@ var mqtt = require('mqtt')
 var config = require('../data/appConfig.json');
 var EventEmitter = require('events'); 
 const fs = require('fs');
-const e = require('cors');
+const Sensor = require('node-hue-api/lib/model/sensors/Sensor');
 
 var client  = mqtt.connect(config.mqttServer)
 
@@ -141,6 +141,10 @@ const updateshadowState = (switchID, inputNumber, payload) => {
       if ( typeof theNewState.cachedState === "number" ) {
         theInput.cachedState = theNewState.cachedState
       }
+      theInput.updated = theNewState.updated
+      
+      const resetRoomID = resetOverride(switchID)
+      shadowState.rooms[resetRoomID].override = {}
     }
   } else {
     // console.log(`dont' recognise this input ${inputNumber}. Needs to be registered in lightsRooms.json`)
@@ -222,15 +226,18 @@ const getTriggers = (registeredTriggers,switchShadow) => {
     let existingState = 0
     let existingCount = null
     let cachedState
+    // let updated
     if ( existingShadowIndex !== -1) {
       existingState = shadowTrigger[existingShadowIndex].state || 0 // if state is found, use that (if state isn't valid then use 0 as backup)
       existingCount = shadowTrigger[existingShadowIndex].previousCount || null // if previousCount is found, use that (if state isn't valid then use 0 as backup)
       cachedState = shadowTrigger[existingShadowIndex].cachedState || false
+      // updated = shadowTrigger[existingShadowIndex].updated || null
     }
     triggerArray.push({
       "inputNumber": trigger.inputNumber,
       "state": existingState,
       "previousCount": existingCount
+      // "updated": updated,
     })
     if ( cachedState ) { // probably a bit overkill for such an edge case but if the cached state already exists then may aswell push that too
       triggerArray[0].cachedState = cachedState
@@ -243,26 +250,39 @@ const getTriggers = (registeredTriggers,switchShadow) => {
 
 const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
 
-  if ( existing.previousCount === payload.event_cnt) {
-    // console.log("is repeated state. Don't update")
-    return false
+  if ( existing.previousCount === payload.event_cnt) { 
+    return false // is repeated state. Don't update
   }
+
+  const shadowState = getShadowState()
+  const room = whichRoomIsSwitchIn(switchID)
+  const override = shadowState.rooms.find( eachRoom => eachRoom.title === room ).override.type
 
   const oldState = existing.state
   const event = payload.event
   let stateTotal = getStateTotalCount(switchID,inputNumber)
-
   let newState
+
   switch ( event ) {
     case "S":
-      if ( oldState === 0) {
-        newState = existing.cachedState || 1
-      } else {
+      if ( override === "on" ) {
         newState = 0
+      } else if ( override === "off") {
+        newState = existing.state || 1
+      } else {
+        if ( oldState === 0) {
+          newState = existing.cachedState || 1
+        } else {
+          newState = 0
+        }
       }
       break;
     case "SS":
-      newState = oldState + 1 > stateTotal ? 1 : oldState + 1
+      if ( override === "off" ) {
+        newState = oldState
+      } else {
+        newState = oldState + 1 > stateTotal ? 1 : oldState + 1
+      }
       break;
     default:
       newState = 0
@@ -270,15 +290,22 @@ const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
   }
 
   sendStateCommand(switchID, inputNumber, newState)
-  return {"state":newState,"cachedState":oldState,"updatedCount":payload.event_cnt}
+  return {"state": newState, "cachedState": oldState, "updatedCount": payload.event_cnt, "updated": Date.now()}
 }
   
+const resetOverride = (switchID) => {
+  console.log("RESET")
+  const room = whichRoomIsSwitchIn(switchID)
+  let shadowState = getShadowState()
+  let allRooms = shadowState.rooms
+  let theRoomIndex = allRooms.findIndex( eachRoom => eachRoom.title === room)
+  return theRoomIndex
+}
+
 const getStateTotalCount = (switchID,inputNumber) => {
   const room = whichRoomIsSwitchIn(switchID)
-
   const allSwitches = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms.find( eachRoom => eachRoom.title === room ).switches
   const allInputs = allSwitches.find( eachSwitch => eachSwitch.title === switchID).inputs
-  console.log({allInputs})
   const theStateTotal = allInputs.find( eachInput => eachInput.inputNumber === inputNumber).stateTotal || 1
   return theStateTotal
 }
@@ -347,8 +374,24 @@ const receivedHomekitOverride = (id,message,timestamp) => {
   const room = override.room
   const overrideType = override.overrideType
   const payload = message === 'true' ? true : false
-  setOverrideValue(room,overrideType,payload,timestamp)
+  const mostRecentlyUpdatedTimestamp = getMostRecentTimestamp(room)
+  const timeDiff = timestamp-mostRecentlyUpdatedTimestamp
+  if ( timeDiff > 1500) { // if most recent timestamp was less than x ms ago, assume this command was from the switch so is not an override
+    setOverrideValue(room,overrideType,payload,timestamp)
+  }
   
+}
+
+const getMostRecentTimestamp = (room) => {
+  let shadowState = getShadowState()
+  let allSwitchesInRoom = shadowState.rooms.find( eachRoom => eachRoom.title === room ).switches
+  let timestampArray = []
+  allSwitchesInRoom.forEach( (eachSwitch) => {
+    eachSwitch.inputs.forEach((input) => {
+      input.updated && timestampArray.push(input.updated)
+    })
+  })
+  return Math.max(...timestampArray)
 }
 
 const whichRoomIsOverrideIn = (topicID) => {
@@ -376,5 +419,22 @@ const setOverrideValue = (room,overrideType,payload,timestamp) => {
 runOnStartup();
 
 const writeToShadow = (content) => {
-  fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(content,null,2));
+  console.log(content)
+  try {
+    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(content,null,2));
+    console.log("Completed writing to staaate")
+  } catch (e) {
+    console.error(e);
+  }
 }
+
+
+
+
+// TO DO MOTION SENSOR
+// IDEA: IF SWITCH STATE IS NOT 0, IE THE SWITCH HAS BEEN TOGGLED,
+// CHANGE MOTION SENSOR TIMEOUT TO BE MAYBE 15 MINS
+// IF SWITCH STATE IS 0, MAYBE MAKE IT 5 MINS?
+
+// MAYBE ANOTHER IDAE: IF THE LONG PRESS IS HELD... RESET THE MOTION SENSOR TIMER TO 2 HOURS
+// ANOTHER IDEA IF STATE IS 4 (e.g. film?) DON'T LISTEN TO MOTION SENSOR EVER

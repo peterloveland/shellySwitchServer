@@ -3,8 +3,8 @@
     {
       "title": "office",
       "override": {
-        "type": "on",
-        "timestamp": 1611942216955
+        "type": "off",
+        "timestamp": 1611960881911
       },
       "switches": [
         {
@@ -12,15 +12,17 @@
           "inputs": [
             {
               "inputNumber": "0",
-              "state": 1,
-              "previousCount": 145,
-              "cachedState": 0
+              "state": 5,
+              "previousCount": 322,
+              "cachedState": 5,
+              "updated": 1611960841548
             },
             {
               "inputNumber": "1",
               "state": 0,
               "previousCount": 0,
-              "cachedState": 0
+              "cachedState": 0,
+              "updated": 1611960788067
             }
           ]
         },
