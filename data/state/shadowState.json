@@ -2,7 +2,10 @@
   "rooms": [
     {
       "title": "office",
-      "override": null,
+      "override": {
+        "type": "on",
+        "timestamp": 1611942216955
+      },
       "switches": [
         {
           "title": "officeI3",
@@ -10,8 +13,8 @@
             {
               "inputNumber": "0",
               "state": 1,
-              "previousCount": 115,
-              "cachedState": 5
+              "previousCount": 145,
+              "cachedState": 0
             },
             {
               "inputNumber": "1",

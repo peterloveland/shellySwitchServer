@@ -174,7 +174,7 @@ const shadowRoomSync = () => {
     } else {
       const roomObj = shadowState.rooms[roomIndexInShadow]
       roomObj.title     = roomObj.title || room.title // this should never be needed but in here for good measure
-      roomObj.override  = roomObj.override || null // if an override has already been set, use that, if not, use null
+      roomObj.override  = roomObj.override || { type: null, timestamp: null} // if an override has already been set, use that, if not, use null
       roomObj.switches  = getLightSwitches(room.title, roomObj)
       fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState,null,2));
     }
@@ -343,10 +343,38 @@ const getSwitchTopic = (switchID, inputNumber, state) => {
 }
 
 const receivedHomekitOverride = (id,message,timestamp) => {
-  // console.log({id,message,timestamp})
+  const override = whichRoomIsOverrideIn(id)
+  const room = override.room
+  const overrideType = override.overrideType
+  const payload = message === 'true' ? true : false
+  setOverrideValue(room,overrideType,payload,timestamp)
+  
 }
 
+const whichRoomIsOverrideIn = (topicID) => {
+  let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms
+  for (var i = 0; i < allRooms.length; i++) {
+    let theRoom = allRooms[i]
+    if ( theRoom.homekitOverrideTopic.off === topicID ) { return {"overrideType":"off","room":theRoom.title} }
+    if ( theRoom.homekitOverrideTopic.on === topicID )  { return {"overrideType":"on","room":theRoom.title} }
+  }
+}
 
-
+const setOverrideValue = (room,overrideType,payload,timestamp) => {
+  let shadowState = getShadowState()
+  let allRooms = shadowState.rooms
+  if ( allRooms ) {
+    let overrideObj = allRooms.find(eachRoom => eachRoom.title === room).override
+    if ( payload ) { // payload is either true or false
+      overrideObj.type = overrideType
+      overrideObj.timestamp = timestamp
+    }
+  }
+  writeToShadow(shadowState)
+}
 
 runOnStartup();
+
+const writeToShadow = (content) => {
+  fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(content,null,2));
+}
