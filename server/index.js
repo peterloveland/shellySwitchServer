@@ -2,73 +2,28 @@ global.__basedir = __dirname;
 
 var mqtt = require('mqtt')
 var config = require('../data/appConfig.json');
-var rulesConfig = require('../data/motionRules.json');
-var lightStates = require('../data/lightStates.json');
 var EventEmitter = require('events'); 
-
 const fs = require('fs');
-const e = require('cors');
-
-
-
-// let huejay = require('huejay');
-// let hueClient = new huejay.Client(config.hue);
 
 var client  = mqtt.connect(config.mqttServer)
-
-// hueClient.bridge.ping()
-//   .then(() => {
-//     console.log('Successful connection to bridge');
-//   })
-//   .catch(error => {
-//     console.log('Could not connect to bridge');
-//   });
-
-
-
-  // hueClient.lights.getAll()
-  //   .then(lights => {
-  //     for (let light of lights) {
-  //       // let previous = this.lights[light.uniqueId];
-  //       // this.lights[light.uniqueId] = light;
-  //       console.log(light)
-  //       // this.publishLight(previous, light);
-  //     }
-  //     // setTimeout(this.callback.bind(this), this.timeout);
-  //   })
-  //   .catch(error => {
-  //     console.log(`An error occurred: ${error.message}`);
-  //   });
-
-
 
 client.on('connect', function () {
   client.subscribe(`${config.mqttBaseTopic}/+/#`, function () {
     console.log(`Subscribing to all ${config.mqttBaseTopic} topics`)
   })
-
   client.subscribe(`lights/hue/00:17:88:01:10:55:18:d4-0b/get/#`, function () {
     console.log(`Subscribing to all hue topic`)
   })
-  
+  client.subscribe(`homekitOverrides/+/set`, function () {
+    console.log(`Subscribing to homekitOverrides topics`)
+  })
 })
 
-
-let shadowSwitchState = [
-  { "name": "officeI3", "state": 0, "previousState": null, "previousCount": null }
-]
-
 client.on('message', function (topic, message) {
-    
-  // if hue sends an update. Update the shadow lights to match the light status. Allows us to determine the action when the switch is toggled
-  if ( topic.match("lights/hue/.*/get/state" )) {
-    setTimeout( () => {
-      // updateShadowState('light',`00:17:88:01:10:55:18:d4-0b`,message)
-    },1000)
-  }
 
   let switchMatch = topic.match("shellies/[.*]/input/0")
   let i3match = topic.match("shellies/(.*)/input_event/(.*)")
+  let homekitOverrideMatch = topic.match("homekitOverrides/(.*)/set")
 
   // if switch sends a command
   if ( switchMatch ) {
@@ -77,21 +32,18 @@ client.on('message', function (topic, message) {
   }
 
   if ( i3match ) {
-    // console.log("IS I3")
     let switchID = i3match[1]
     let switchNumber = i3match[2]
     let event = JSON.parse(message.toString())
     updateShadowSwitchState(switchID, switchNumber, event)
   }
+  
+  if ( homekitOverrideMatch ) {
+    receivedHomekitOverride(homekitOverrideMatch[1],message.toString(),Date.now())
+  }
 
 })
 
-
-const getShadowLightIndex = (id) => {
-  let shadowState = getShadowState()
-  // console.log(shadowState)
-  // return objIndex
-}
 
 const getShadowSwitchesIndex = (id) => {
   const objIndex = shadowSwitches.findIndex((theSwitch => theSwitch.id === id));
@@ -110,7 +62,6 @@ const getShadowState = () => {
     }
   }
   return shadowState
-
 }
 
 const shouldSwitchTriggerAction = (id,payload) => {
@@ -219,7 +170,7 @@ const setSwitchNumberState = (switchIndex, switchNumber, payload, switchID) => {
     setSwitchNumberState(switchIndex, switchNumber, payload, switchID)
   } else {
     let existingState = allSwitches[switchNumber].state
-    console.log(`Existing State: ${existingState}`)
+    // console.log(`Existing State: ${existingState}`)
     theSwitch.previousCount = payload.event_cnt
     if ( payload.event === "S" && existingState !== 0 ) {
       theSwitch.cachedState = existingState
@@ -286,7 +237,6 @@ const whichRoomIsSwitchIn = (switchID) => {
   allRooms = Object.values(allRooms.rooms)
   for (var i = 0; i < allRooms.length; i++) {
     let roomObj = allRooms[i]
-    // console.log(roomObj)
     if ( roomObj.switch === switchID) {
       return roomObj.title
     }
@@ -295,38 +245,38 @@ const whichRoomIsSwitchIn = (switchID) => {
 }
 
 const getSwitchesForRoom = (room) => {
-  console.log(room)
   let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms
   const allSwitchesForRoom = allRooms.find( eachRoom => eachRoom.title === room).switches
   return allSwitchesForRoom
-  // console.log(allSwitchesForRoom.find( room => room.title === room))
 }
 
 const getSwitchNumberForSwitches = (allSwitches,switchNumber) => {
-  return allSwitches.find( eachSwitch => eachSwitch.id === switchNumber )
+  let theSwitch = allSwitches.find( eachSwitch => eachSwitch.id === switchNumber )
+  if ( theSwitch ) {
+    return theSwitch
+  } else 
+    console.log(`a switch with the id ${switchNumber} has not yet been registered. Add to lightsRooms.json`)
+    return false
 }
 
 const sendStateCommand = (switchID, switchNumber, newState) => {
   const topic = getSwitchTopic(switchID, switchNumber, newState)
-  let payload = calculatePayload(newState)
-  let theTopic = `${topic.room}/${topic.switchNumber}/${payload.group}`
-  console.log(theTopic)
-  client.publish(
-    `${theTopic}`, `${payload.value}`
-  ) 
+  if ( topic ) { // if a topic was found for the switch ID (if it wasn't then it might be you need to register one in lightrooms.json with the ID of the switch number)
+    let payload = calculatePayload(newState)
+    let theTopic = `${topic.room}/${topic.switchNumber}/${payload.group}`
+    console.log(`Sending updated state value to: ${theTopic}`)
+    client.publish(
+      `${theTopic}`, `${payload.value}`
+    ) 
+  } else {
+    console.error(`No topic found for ${switchID}:${switchNumber}`)
+  }
 }
 
 const calculatePayload = (state) => {
   let group = Math.floor(+state/3)
   let value = state - (group * 3)
   return {group,value}
-}
-
-const cycleThroughState = (switchID, currentState) => {
-  const theSwitchIndex = lightStates.findIndex((theSwitch => theSwitch.name === switchID));
-  const allStates = lightStates[theSwitchIndex].states
-  const numberOfStates = allStates.length
-  if ( currentState + 1 === numberOfStates ) { return 1 } else { return currentState } // at the top end of the states cycle back around to 1, OR just return the next state
 }
 
 const getSwitchTopic = (switchID, switchNumber, state) => {
@@ -336,4 +286,8 @@ const getSwitchTopic = (switchID, switchNumber, state) => {
   theSwitch.room = room
   theSwitch.switchNumber = switchNumber
   return theSwitch
+}
+
+const receivedHomekitOverride = (id,message,timestamp) => {
+  console.log({id,message,timestamp})
 }
