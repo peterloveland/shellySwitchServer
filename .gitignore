@@ -107,3 +107,4 @@ dist
 data/appConfig.json
 package-lock.json
 data/state/shadowState.json
+data/state/shadowState.json
