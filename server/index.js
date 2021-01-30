@@ -18,6 +18,9 @@ client.on('connect', function () {
   client.subscribe(`homekitOverrides/+/set`, function () {
     console.log(`Subscribing to homekitOverrides topics`)
   })
+  client.subscribe(`zigbee2mqtt/motion/+`, function () {
+    console.log(`Subscribing to motionSensorTopics topics`)
+  })
 })
 
 client.on('message', function (topic, message) {
@@ -25,6 +28,7 @@ client.on('message', function (topic, message) {
   let switchMatch = topic.match("shellies/[.*]/input/0")
   let i3match = topic.match("shellies/(.*)/input_event/(.*)")
   let homekitOverrideMatch = topic.match("homekitOverrides/(.*)/set")
+  let motionSensorMatch = topic.match("zigbee2mqtt/motion/(.*)")
 
   // if switch sends a command
   if ( switchMatch ) {
@@ -41,6 +45,10 @@ client.on('message', function (topic, message) {
   
   if ( homekitOverrideMatch ) {
     receivedHomekitOverride(homekitOverrideMatch[1],message.toString(),Date.now())
+  }
+
+  if ( motionSensorMatch ) {
+    motionSensorTrigger(motionSensorMatch[1],message.toString(),Date.now())
   }
 
 })
@@ -168,7 +176,7 @@ const shadowRoomSync = () => {
   let allRegisteredRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json', 'utf8')).rooms
   allRegisteredRooms.forEach((room)=> {
     let roomIndexInShadow = shadowState.rooms.findIndex( (eachRoom) => eachRoom.title === room.title)
-    console.log(roomIndexInShadow)
+    // console.log(roomIndexInShadow)
     if ( roomIndexInShadow === -1 ) {
       shadowState.rooms.push({
         "title": room.title
@@ -180,16 +188,41 @@ const shadowRoomSync = () => {
       roomObj.title     = roomObj.title || room.title // this should never be needed but in here for good measure
       roomObj.override  = roomObj.override || { type: null, timestamp: null} // if an override has already been set, use that, if not, use null
       roomObj.switches  = getLightSwitches(room.title, roomObj)
+      roomObj.motionSensors = getMotionSensors(room.title, roomObj)
       fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState,null,2));
     }
   })
 }
 
+const getMotionSensors = (roomTitle, shadowRoomState) => { 
+  let roomMotionSensors = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json', 'utf8')).rooms.find((room)=>room.title === roomTitle).motionSensors
+  let motionArray
+  let existingMotionSensors = shadowRoomState.motionSensors
+
+
+  if ( existingMotionSensors === undefined ) {
+    motionArray = []
+  } else {
+    motionArray = existingMotionSensors
+  }
+
+  roomMotionSensors.forEach((eachSensor) => {
+    let sensorIndex = motionArray.findIndex((eachExistingMotionSensor) => eachExistingMotionSensor.id === eachSensor.id)
+    if ( sensorIndex === -1 ) {
+      // if motionArray can't find a switch with the same title... add it
+      motionArray.push({
+        "id": eachSensor.id,
+        "lastTriggered": "timestamp"
+      })
+    }
+  })
+  // console.log(motionArray)
+  return motionArray
+}
+
 const getLightSwitches = (roomTitle, shadowRoomState) => {
   let roomSwitches = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json', 'utf8')).rooms.find((room)=>room.title === roomTitle).switches
-  
   let switchArray
-
   let existingSwitches = shadowRoomState.switches
 
   if ( existingSwitches === undefined ) {
@@ -214,7 +247,7 @@ const getLightSwitches = (roomTitle, shadowRoomState) => {
 }
 
 const getTriggers = (registeredTriggers,switchShadow) => {
-  console.log(registeredTriggers)
+  // console.log(registeredTriggers)
 
   let shadowTrigger = switchShadow.inputs ? switchShadow.inputs : []
   
@@ -250,9 +283,18 @@ const getTriggers = (registeredTriggers,switchShadow) => {
 
 const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
 
+  let eventCount = payload.event_cnt
   if ( existing.previousCount === payload.event_cnt) { 
     return false // is repeated state. Don't update
   }
+
+  // console.log(payload.event_cnt - existing.previousCount)
+  // // for some reason when the switch is held until the '' event it sends 2 a few seconds apart with an incremenet event_cnt
+  // if ( payload.event === '' && (payload.event_cnt - existing.previousCount) === 1 ) {
+  //   return false
+  // } else {
+  //   eventCount = payload.event_cnt - 1
+  // }
 
   const shadowState = getShadowState()
   const room = whichRoomIsSwitchIn(switchID)
@@ -262,7 +304,8 @@ const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
   const event = payload.event
   let stateTotal = getStateTotalCount(switchID,inputNumber)
   let newState
-
+  // console.log({oldState})
+  // console.log({payload})
   switch ( event ) {
     case "S":
       if ( override === "on" ) {
@@ -284,20 +327,20 @@ const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
         newState = oldState + 1 > stateTotal ? 1 : oldState + 1
       }
       break;
-    case "L":
-      newState = 1
-      break;
+    // case '':
+    //   newState = 1
+    //   break;
     default:
-      newState = 0
+      newState = oldState
       break;
   }
 
   sendStateCommand(switchID, inputNumber, newState)
-  return {"state": newState, "cachedState": oldState, "updatedCount": payload.event_cnt, "updated": Date.now()}
+  return {"state": newState, "cachedState": oldState, "updatedCount": eventCount, "updated": Date.now()}
 }
   
 const resetOverride = (switchID) => {
-  console.log("RESET")
+  // console.log("RESET")
   const room = whichRoomIsSwitchIn(switchID)
   let shadowState = getShadowState()
   let allRooms = shadowState.rooms
@@ -422,10 +465,10 @@ const setOverrideValue = (room,overrideType,payload,timestamp) => {
 runOnStartup();
 
 const writeToShadow = (content) => {
-  console.log(content)
+  // console.log(content)
   try {
     fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(content,null,2));
-    console.log("Completed writing to staaate")
+    // console.log("Completed writing to state")
   } catch (e) {
     console.error(e);
   }
@@ -441,3 +484,65 @@ const writeToShadow = (content) => {
 
 // MAYBE ANOTHER IDAE: IF THE LONG PRESS IS HELD... RESET THE MOTION SENSOR TIMER TO 2 HOURS
 // ANOTHER IDEA IF STATE IS 4 (e.g. film?) DON'T LISTEN TO MOTION SENSOR EVER
+
+
+const motionSensorTrigger = (motionID,message,timestamp) => {
+  if ( !JSON.parse(message).occupancy ) { return false } // only run if occupancy is true
+  let shadowState = getShadowState()
+  let motion = updateMotionSensorShadow(shadowState,motionID,timestamp)
+  if ( !motion ) { console.log(`motion sensor with id:${motionID} isn't registered to a room`); return false } // if motion sensor isn't registered
+  // affectedSwitches.forEach((eachSwitch) => {
+    // console.log(motion.room, motion.timestamp)
+  let allSwitches = shadowState.rooms.find( (room) => room.title === motion.room ).switches
+  allSwitches.forEach((eachSwitch) => {
+    eachSwitch.inputs.forEach((eachInput)=>{
+      let shouldTriggerStateChange = doesMotionAffectInput(motion.room,eachSwitch.title,eachInput.inputNumber)
+      if ( shouldTriggerStateChange ) {
+        let newState
+        if ( eachInput.state === 0 ) {
+          newState = eachInput.cachedState || 1
+          eachInput.state = newState
+          eachInput.updated = timestamp // updates the timestamp so motion events don't count as overrides
+          sendStateCommand(eachSwitch.title, eachInput.inputNumber, newState)
+        }
+      }
+    })
+  })
+  writeToShadow(shadowState)
+}
+
+const doesMotionAffectInput = (room,theSwitch,input) => {
+  console.log(room,theSwitch,input)
+  let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms
+  let theRoom = allRooms.find( eachRoom => eachRoom.title === room)
+  let allInputs = theRoom.switches.find( eachSwitch => eachSwitch.title === theSwitch ).inputs
+  let theInput = allInputs.find( eachInput => eachInput.inputNumber === input )
+  if ( theInput.isMotionSensorTrigger ) {
+    return theInput.isMotionSensorTrigger
+  } else {
+    return false
+  }
+}
+
+const updateMotionSensorShadow = (shadowState,motionID,timestamp) => {
+  let allRooms = shadowState.rooms
+  let returnObj = false
+  allRooms.forEach( (room) => {
+    let allMotionSensors = room.motionSensors
+    allMotionSensors.forEach( (motion) => {
+      if ( motion.id === motionID ) {
+        // let targetTriggers = getTargetTriggers(room.title,motionID)
+        motion.lastTriggered = timestamp
+        returnObj = {"room": room.title, "timestamp": timestamp}
+      }
+    })
+  })
+  return returnObj
+}
+
+const getTargetTriggers = (roomTitle,motionID) => {
+  let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms
+  const theRoom = allRooms.find( eachRoom => eachRoom.title === roomTitle)
+  const theMotionSensors = theRoom.motionSensors.find( motionSensor => motionSensor.id === motionID)
+  return theMotionSensors.targetTrigger
+}

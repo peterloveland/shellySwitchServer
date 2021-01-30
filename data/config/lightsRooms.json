@@ -13,24 +13,16 @@
             {
               "inputNumber": "0",
               "stateTotal": 5,
-              "topic": "peterSwitch/office/0"
-            },
-            {
-              "inputNumber": "1",
-              "stateTotal": 2,
-              "topic": "peterSwitch/office/1"
+              "topic": "peterSwitch/office/0",
+              "isMotionSensorTrigger": true
             }
           ]
-        },
+        }
+      ],
+      "motionSensors": [
         {
-          "title": "officeI222",
-          "inputs": [
-            {
-              "inputNumber": "2",
-              "stateTotal": 2,
-              "topic": "shellies/officeI22223/input/0"
-            }
-          ]
+          "id":"motion4",
+          "targetTrigger": [0]        
         }
       ]
     }

@@ -9,29 +9,18 @@
           "inputs": [
             {
               "inputNumber": "0",
-              "state": 0,
-              "previousCount": 372,
-              "cachedState": 5,
-              "updated": 1612002591850
-            },
-            {
-              "inputNumber": "1",
-              "state": 0,
-              "previousCount": 0,
-              "cachedState": 0,
-              "updated": 1611961838215
+              "state": 4,
+              "previousCount": 610,
+              "cachedState": 4,
+              "updated": 1612021249927
             }
           ]
-        },
+        }
+      ],
+      "motionSensors": [
         {
-          "title": "officeI222",
-          "inputs": [
-            {
-              "inputNumber": "2",
-              "state": 0,
-              "previousCount": null
-            }
-          ]
+          "id": "motion4",
+          "lastTriggered": 1612021270392
         }
       ]
     }
