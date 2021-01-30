@@ -6,6 +6,7 @@
         "off": "officeIsOff",
         "on": "officeIsOn"
       },
+      "motionTurnOffAfter": 2,
       "switches": [
         {
           "title": "officeI3",

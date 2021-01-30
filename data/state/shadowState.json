@@ -3,16 +3,17 @@
     {
       "title": "office",
       "override": {},
+      "turnOffAt": 1612027778876,
       "switches": [
         {
           "title": "officeI3",
           "inputs": [
             {
               "inputNumber": "0",
-              "state": 4,
-              "previousCount": 610,
-              "cachedState": 4,
-              "updated": 1612021249927
+              "state": 2,
+              "previousCount": 665,
+              "cachedState": 1,
+              "updated": 1612027178875
             }
           ]
         }
@@ -20,9 +21,10 @@
       "motionSensors": [
         {
           "id": "motion4",
-          "lastTriggered": 1612021270392
+          "lastTriggered": 1612027626286
         }
       ]
     }
-  ]
+  ],
+  "turnOffAt": 1612026825185
 }

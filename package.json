@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "huejay": "^1.9.0",
+    "node-cron": "^2.0.3",
     "node-hue-api": "^4.0.10"
   }
 }

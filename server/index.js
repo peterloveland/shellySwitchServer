@@ -5,6 +5,8 @@ var config = require('../data/appConfig.json');
 var EventEmitter = require('events'); 
 const fs = require('fs');
 const Sensor = require('node-hue-api/lib/model/sensors/Sensor');
+var cron = require('node-cron');
+
 
 var client  = mqtt.connect(config.mqttServer)
 
@@ -138,7 +140,8 @@ const runOnStartup = () => {
 const updateshadowState = (switchID, inputNumber, payload) => {
   let shadowState = getShadowState()
   let room = whichRoomIsSwitchIn(switchID)
-  let allSwitchesInRoom = shadowState.rooms.find( eachRoom => eachRoom.title === room ).switches
+  let shadowRoom = shadowState.rooms.find( eachRoom => eachRoom.title === room )
+  let allSwitchesInRoom = shadowRoom.switches
   let allInputsForSwitch = allSwitchesInRoom.find( eachSwitch => eachSwitch.title === switchID).inputs
   let theInput = allInputsForSwitch.find(input => input.inputNumber === inputNumber )
   if ( theInput ) {
@@ -153,6 +156,9 @@ const updateshadowState = (switchID, inputNumber, payload) => {
       
       const resetRoomID = resetOverride(switchID)
       shadowState.rooms[resetRoomID].override = {}
+      if ( theNewState.state > 0) {
+        resetTurnOffTimer(shadowRoom,room,10)
+      }
     }
   } else {
     // console.log(`dont' recognise this input ${inputNumber}. Needs to be registered in lightsRooms.json`)
@@ -282,7 +288,6 @@ const getTriggers = (registeredTriggers,switchShadow) => {
 
 
 const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
-
   let eventCount = payload.event_cnt
   if ( existing.previousCount === payload.event_cnt) { 
     return false // is repeated state. Don't update
@@ -304,8 +309,7 @@ const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
   const event = payload.event
   let stateTotal = getStateTotalCount(switchID,inputNumber)
   let newState
-  // console.log({oldState})
-  // console.log({payload})
+
   switch ( event ) {
     case "S":
       if ( override === "on" ) {
@@ -330,6 +334,14 @@ const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
     // case '':
     //   newState = 1
     //   break;
+    case "autoTurnOff":
+      console.log("auto turn off")
+      newState = 0
+      break;
+    case "motionTurnOn":
+      console.log("auto turn on")
+      newState = existing.cachedState || 1
+      break;
     default:
       newState = oldState
       break;
@@ -468,7 +480,7 @@ const writeToShadow = (content) => {
   // console.log(content)
   try {
     fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(content,null,2));
-    // console.log("Completed writing to state")
+    // console.log("Completed writing to staaate")
   } catch (e) {
     console.error(e);
   }
@@ -491,24 +503,45 @@ const motionSensorTrigger = (motionID,message,timestamp) => {
   let shadowState = getShadowState()
   let motion = updateMotionSensorShadow(shadowState,motionID,timestamp)
   if ( !motion ) { console.log(`motion sensor with id:${motionID} isn't registered to a room`); return false } // if motion sensor isn't registered
-  // affectedSwitches.forEach((eachSwitch) => {
-    // console.log(motion.room, motion.timestamp)
-  let allSwitches = shadowState.rooms.find( (room) => room.title === motion.room ).switches
+
+  console.log(`Detected motion in ${motion.room} on the sensor: ${motionID}`)  
+  let theRoomShadow = shadowState.rooms.find( (room) => room.title === motion.room )
+  let allSwitches = theRoomShadow.switches
   allSwitches.forEach((eachSwitch) => {
     eachSwitch.inputs.forEach((eachInput)=>{
       let shouldTriggerStateChange = doesMotionAffectInput(motion.room,eachSwitch.title,eachInput.inputNumber)
       if ( shouldTriggerStateChange ) {
         let newState
-        if ( eachInput.state === 0 ) {
+        if ( eachInput.state === 0 || theRoomShadow.override.type === "off" ) {
           newState = eachInput.cachedState || 1
           eachInput.state = newState
           eachInput.updated = timestamp // updates the timestamp so motion events don't count as overrides
-          sendStateCommand(eachSwitch.title, eachInput.inputNumber, newState)
+          theRoomShadow.override = {}
+          // sendStateCommand(eachSwitch.title, eachInput.inputNumber, newState)
+          let payload = {"event":"motionTurnOn"}
+          updateshadowState(eachSwitch.title, eachInput.inputNumber, payload)
         }
       }
     })
   })
+  resetTurnOffTimer(theRoomShadow, motion.room)
   writeToShadow(shadowState)
+}
+
+const resetTurnOffTimer = (theRoomShadow, room, timeOverride ) => {
+  let minutes = 2 // start with a 2 minute timer
+  if ( timeOverride ) { // if an override has been specified. Use that for the minutes
+    minutes = timeOverride
+  } else {
+    let theRoomConfig = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms.find( eachRoom => eachRoom.title === room)
+    if ( theRoomConfig.motionTurnOffAfter ) {  // if an override hasn't been specified, and a motionTurnOffAfter value has been set
+      minutes = Math.min(theRoomConfig.motionTurnOffAfter,2) // then use that (unless it's under 2 minutes in which case I override it to 2 mins)
+    }
+  }
+  let countDown = minutes * 60000 // if minutes provided, makes sure it's more than 2 minutes. If no minutes provided default to 5
+  const originalTime = theRoomShadow.turnOffAt
+  const newTime = Date.now() + countDown
+  theRoomShadow.turnOffAt = Math.max(originalTime,newTime) // if the old timer was bigger, don't update it
 }
 
 const doesMotionAffectInput = (room,theSwitch,input) => {
@@ -545,4 +578,30 @@ const getTargetTriggers = (roomTitle,motionID) => {
   const theRoom = allRooms.find( eachRoom => eachRoom.title === roomTitle)
   const theMotionSensors = theRoom.motionSensors.find( motionSensor => motionSensor.id === motionID)
   return theMotionSensors.targetTrigger
+}
+
+
+
+cron.schedule("*/10 * * * * *", function() {
+  checkToSwitchOff()
+});
+
+const checkToSwitchOff = () => {
+  let shadowState = getShadowState()
+  let allRooms = shadowState.rooms
+  const timeNow = Date.now()
+  
+  allRooms.forEach( (room) => {
+    if ( room.turnOffAt && timeNow > room.turnOffAt ) {
+      room.turnOffAt = null
+      room.switches.forEach( (eachSwitch) => {
+        eachSwitch.inputs.forEach( (eachInput) => {
+          let payload = {"event":"autoTurnOff"}
+          updateshadowState(eachSwitch.title, eachInput.inputNumber, payload)
+        })
+      }) 
+    }
+  }) 
+
+  writeToShadow(shadowState)  
 }
