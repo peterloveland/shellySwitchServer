@@ -284,6 +284,9 @@ const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
         newState = oldState + 1 > stateTotal ? 1 : oldState + 1
       }
       break;
+    case "L":
+      newState = 1
+      break;
     default:
       newState = 0
       break;
