@@ -13,8 +13,8 @@
           "inputs": [
             {
               "inputNumber": "0",
-              "stateTotal": 5,
-              "topic": "peterSwitch/office/0",
+              "stateTotal": 3,
+              "topic": "peterSwitch/officeI3/0",
               "isMotionSensorTrigger": true
             }
           ]
@@ -22,8 +22,10 @@
       ],
       "motionSensors": [
         {
-          "id":"motion4",
-          "targetTrigger": [0]        
+          "id": "motion4",
+          "targetTrigger": [
+            0
+          ]
         }
       ]
     }

@@ -1,7 +1,7 @@
 {
-  "mqttBaseTopic" : "shellies",
-  "mqttServer" : "mqtt://192.168.1.110:1883",
-  "defaultSwitchOffAfterMins" : 5,
+  "mqttBaseTopic": "shellies",
+  "mqttServer": "mqtt://192.168.1.108:1883",
+  "defaultSwitchOffAfterMins": 5,
   "hue": {
     "host": "192.168.1.166",
     "username": "miBzG5qyzBxKaF8tnp3O2Sirk2HGJsGFmE5TXHRK"
