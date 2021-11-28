@@ -12,14 +12,6 @@ var cron = require('node-cron');
 
 var client = mqtt.connect(config.mqttServer)
 
-// make sure the require files exist
-
-try {
-  if (fs.existsSync('./data/state/shadowState.json')) { }
-} catch (err) {
-  fs.writeFileSync('./data/state/shadowState.json', "");
-}
-
 client.on('connect', function () {
   client.subscribe(`${config.mqttBaseTopic}/+/#`, function () {
     console.log(`Subscribing to all ${config.mqttBaseTopic} topics`)
@@ -190,7 +182,7 @@ const shadowRoomSync = () => {
   if (shadowState.rooms === undefined) {
     // the rooms array doesn't exist. So make it
     shadowState.rooms = []
-    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState, null, 2));
+    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState, null, 2), { flag: 'w' });
     shadowRoomSync() // rerun
   }
 
@@ -202,7 +194,7 @@ const shadowRoomSync = () => {
       shadowState.rooms.push({
         "title": room.title
       })
-      fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState, null, 2));
+      fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState, null, 2), { flag: 'w' });
       shadowRoomSync() // rerun
     } else {
       const roomObj = shadowState.rooms[roomIndexInShadow]
@@ -210,7 +202,7 @@ const shadowRoomSync = () => {
       roomObj.override = roomObj.override || { type: null, timestamp: null } // if an override has already been set, use that, if not, use null
       roomObj.switches = getLightSwitches(room.title, roomObj)
       roomObj.motionSensors = getMotionSensors(room.title, roomObj)
-      fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState, null, 2));
+      fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState, null, 2), { flag: 'w' });
     }
   })
 }
@@ -495,7 +487,7 @@ runOnStartup();
 const writeToShadow = (content) => {
   // console.log(content)
   try {
-    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(content, null, 2));
+    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(content, null, 2), { flag: 'w' });
     // console.log("Completed writing to staaate")
   } catch (e) {
     console.error(e);
