@@ -6,7 +6,7 @@
         "off": "officeIsOff",
         "on": "officeIsOn"
       },
-      "motionTurnOffAfter": 2,
+      "motionTurnOffAfter": 999999,
       "switches": [
         {
           "title": "officeI3",
@@ -35,7 +35,7 @@
         "off": "loungeIsOff",
         "on": "loungeIsOn"
       },
-      "motionTurnOffAfter": 2,
+      "motionTurnOffAfter": 999999,
       "switches": [
         {
           "title": "loungeI3",
