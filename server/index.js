@@ -581,6 +581,9 @@ const resetTurnOffTimer = (theRoomShadow, room, timeOverride) => {
   const originalTime = theRoomShadow.turnOffAt
   const newTime = Date.now() + countDown
   theRoomShadow.turnOffAt = Math.max(originalTime, newTime) // if the old timer was bigger, don't update it
+
+
+  theRoomShadow.turnOffAt = 0 // trying this to prevent automatic turn off temporarily
 }
 
 const doesMotionAffectInput = (room, theSwitch, input) => {
