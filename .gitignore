@@ -115,3 +115,5 @@ data/state/*
 data/state/shadowState.json
 
 .DS_Store
+
+.gitattributes
