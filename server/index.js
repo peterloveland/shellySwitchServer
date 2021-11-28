@@ -16,7 +16,7 @@ var client = mqtt.connect(config.mqttServer)
 
 try {
   if (fs.existsSync('./data/state/shadowState.json')) { }
-} catch {
+} catch (err) {
   fs.writeFileSync('./data/state/shadowState.json', "");
 }
 
