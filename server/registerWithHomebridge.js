@@ -1,9 +1,9 @@
 const fs = require('fs');
 
-let homebridgeConfigPath = "/Volumes/pi's home/.homebridge/config.json"
-
 if (process.env.NODE_ENV === "production") {
-  homebridgeConfigPath = "home/.homebridge/config.json"
+  global.homebridgeConfigPath = "home/.homebridge/config.json"
+} else {
+  global.homebridgeConfigPath = "/Volumes/pi's home/.homebridge/config.json"
 }
 
 let homebridgeConfig = JSON.parse(fs.readFileSync(homebridgeConfigPath));
