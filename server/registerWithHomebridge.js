@@ -89,8 +89,6 @@ rooms.map((room) => {
 })
 
 
-
-
 exec('pm2 restart homebridge', execCallback);
 
 function execCallback(err, stdout, stderr) {
