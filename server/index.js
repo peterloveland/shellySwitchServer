@@ -2,7 +2,6 @@ global.__basedir = __dirname;
 
 var mqtt = require('mqtt')
 
-
 global.config = require('../data/appConfig.json');
 
 require('./registerWithHomebridge')
@@ -12,6 +11,14 @@ const Sensor = require('node-hue-api/lib/model/sensors/Sensor');
 var cron = require('node-cron');
 
 var client = mqtt.connect(config.mqttServer)
+
+// make sure the require files exist
+
+try {
+  if (fs.existsSync('./data/state/shadowState.json')) { }
+} catch {
+  fs.writeFileSync('./data/state/shadowState.json', "");
+}
 
 client.on('connect', function () {
   client.subscribe(`${config.mqttBaseTopic}/+/#`, function () {
