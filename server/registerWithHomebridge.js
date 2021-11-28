@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { exec } = require("child_process");
 
 if (process.env.NODE_ENV === "development") {
   global.homebridgeConfigPath = "/Volumes/pi's home/.homebridge/config.json"
