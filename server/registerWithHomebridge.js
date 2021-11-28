@@ -90,3 +90,11 @@ rooms.map((room) => {
 
 
 
+
+exec('pm2 restart homebridge', execCallback);
+
+function execCallback(err, stdout, stderr) {
+  if (err) console.log(err);
+  if (stdout) console.log(stdout);
+  if (stderr) console.log(stderr);
+}
