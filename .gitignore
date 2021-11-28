@@ -105,5 +105,7 @@ dist
 
 *.code-workspace
 data/appConfig.json
+
 package-lock.json
+
 data/state/*
