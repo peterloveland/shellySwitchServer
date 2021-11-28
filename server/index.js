@@ -136,6 +136,7 @@ const convertTo255 = (percentage) => {
 
 
 const runOnStartup = () => {
+  console.log("START UP")
   shadowRoomSync() // goes through the configured rooms and makes sure they're in the state, this should also copy across any existing state if room is already in the shadow state.
 }
 
@@ -174,22 +175,32 @@ const updateshadowState = (switchID, inputNumber, payload) => {
 }
 
 const getShadowState = () => {
-  return JSON.parse(fs.readFileSync('./data/state/shadowState.json', 'utf8'))
+  let shadowState = fs.readFileSync('./data/state/shadowState.json', { flag: "a+", encoding: 'utf8' })
+
+  // console.log(typeof shadowState)
+  if (!shadowState) {
+    console.log('Shadow is empty. Makign it an object')
+    // the rooms array doesn't exist. So make it
+    shadowState = {}
+    shadowState.rooms = []
+    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState, null, 2), { flag: null });
+    getShadowState() // rerun
+  }
+
+  return typeof shadowState === "object" ? shadowState : JSON.parse(shadowState) // parse into JSON so objects can be accessed
 }
 
 const shadowRoomSync = () => {
   let shadowState = getShadowState()
-  if (shadowState.rooms === undefined) {
-    // the rooms array doesn't exist. So make it
-    shadowState.rooms = []
-    fs.writeFileSync('./data/state/shadowState.json', JSON.stringify(shadowState, null, 2), { flag: 'w' });
-    shadowRoomSync() // rerun
-  }
+
 
   let allRegisteredRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json', 'utf8')).rooms
+
+  // console.log(allRegisteredRooms)
+
   allRegisteredRooms.forEach((room) => {
-    let roomIndexInShadow = shadowState.rooms.findIndex((eachRoom) => eachRoom.title === room.title)
-    // console.log(roomIndexInShadow)
+    let roomIndexInShadow = shadowState?.rooms?.findIndex((eachRoom) => eachRoom.title === room.title)
+    console.log(roomIndexInShadow)
     if (roomIndexInShadow === -1) {
       shadowState.rooms.push({
         "title": room.title
@@ -260,9 +271,8 @@ const getLightSwitches = (roomTitle, shadowRoomState) => {
 }
 
 const getTriggers = (registeredTriggers, switchShadow) => {
-  // console.log(registeredTriggers)
 
-  let shadowTrigger = switchShadow.inputs ? switchShadow.inputs : []
+  let shadowTrigger = switchShadow?.inputs ? switchShadow.inputs : []
 
 
   let triggerArray = []
@@ -598,6 +608,12 @@ const checkToSwitchOff = () => {
   let shadowState = getShadowState()
   let allRooms = shadowState.rooms
   const timeNow = Date.now()
+
+  if (!allRooms) {
+    console.log("DON'T EXIST")
+    console.log(shadowState.rooms)
+    return false
+  }
 
   allRooms.forEach((room) => {
     if (room.turnOffAt && timeNow > room.turnOffAt) {
