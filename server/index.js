@@ -149,6 +149,8 @@ const updateshadowState = (switchID, inputNumber, payload) => {
   let shadowState = getShadowState()
   let room = whichRoomIsSwitchIn(switchID)
   let shadowRoom = shadowState.rooms.find(eachRoom => eachRoom.title === room)
+  console.log("THIS:")
+  console.log(shadowRoom)
   let allSwitchesInRoom = shadowRoom.switches
   let allInputsForSwitch = allSwitchesInRoom.find(eachSwitch => eachSwitch.title === switchID).inputs
   let theInput = allInputsForSwitch.find(input => input.inputNumber === inputNumber)
@@ -388,18 +390,37 @@ const getStateTotalCount = (switchID, inputNumber) => {
 
 const whichRoomIsSwitchIn = (switchID) => {
   let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json'))
+
+  // console.log(allRooms.rooms)
+
+  // const index = allRooms.rooms.findIndex(x => x.title === "office");
+  // console.log({ index })
+
+
+
   allRooms = Object.values(allRooms.rooms)
+  console.log("all rooms:")
+  console.log(allRooms.length)
   for (var i = 0; i < allRooms.length; i++) {
-    let switches = allRooms[i].switches
-    for (var i = 0; i < switches.length; i++) {
-      if (switches[i].title === switchID) {
+    console.log(`count ${i}`)
+    let theRoomSwitches = allRooms[i].switches
+    for (var i2 = 0; i2 < theRoomSwitches.length; i2++) {
+      console.log("switch[i2].Title:")
+      console.log(theRoomSwitches[i2].title)
+      console.log("::")
+      console.log(switchID)
+      if (theRoomSwitches[i2].title === switchID) {
+        console.log(`FOUND: ${allRooms[i].title}`)
         return allRooms[i].title
       } else {
         console.log(`no match`)
       }
     }
   }
+
 }
+
+
 
 const getSwitchesForRoom = (room) => {
   let allRooms = JSON.parse(fs.readFileSync('./data/config/lightsRooms.json')).rooms
