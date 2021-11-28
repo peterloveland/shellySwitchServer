@@ -327,7 +327,7 @@ const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
   let stateTotal = getStateTotalCount(switchID, inputNumber)
   let newState
 
-  switch (event) {
+  switch (event) { // TOGGLE THE LIGHTS
     case "S":
       if (override === "on") {
         newState = 0
@@ -341,7 +341,7 @@ const calculateSwitchState = (switchID, inputNumber, existing, payload) => {
         }
       }
       break;
-    case "SS":
+    case "L": // GO TO THE NEXT STATE
       console.log(override)
       if (override === "off") {
         newState = oldState
