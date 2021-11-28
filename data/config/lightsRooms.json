@@ -28,6 +28,35 @@
           ]
         }
       ]
+    },
+    {
+      "title": "lounge",
+      "homekitOverrideTopic": {
+        "off": "loungeIsOff",
+        "on": "loungeIsOn"
+      },
+      "motionTurnOffAfter": 2,
+      "switches": [
+        {
+          "title": "loungeI3",
+          "inputs": [
+            {
+              "inputNumber": "0",
+              "stateTotal": 3,
+              "topic": "peterSwitch/loungeI3/0",
+              "isMotionSensorTrigger": true
+            }
+          ]
+        }
+      ],
+      "motionSensors": [
+        {
+          "id": "motion4",
+          "targetTrigger": [
+            0
+          ]
+        }
+      ]
     }
   ]
 }
