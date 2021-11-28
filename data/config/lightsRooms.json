@@ -13,7 +13,7 @@
           "inputs": [
             {
               "inputNumber": "0",
-              "stateTotal": 3,
+              "stateTotal": 5,
               "topic": "peterSwitch/officeI3/0",
               "isMotionSensorTrigger": true
             }
