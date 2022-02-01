@@ -25,11 +25,11 @@ jobs:
       - uses: actions/checkout@v2
       
       - name: Create Github Issue
-        # Github Token
-        token: ${{ secrets.GITHUB_TOKEN }}
         # uses: dacbd/create-issue-action@734fc27cd95f8850ddbca891560233de7aed1e81
         uses: dacbd/create-issue-action@v1
         with:
+          # Github Token
+          token: ${{ secrets.GITHUB_TOKEN }}
           # Issue title
           title: "test"
           # Body content of issue
