@@ -23,6 +23,15 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      
+      - name: Create Github Issue
+        # You may pin to the exact commit or the version.
+        # uses: dacbd/create-issue-action@734fc27cd95f8850ddbca891560233de7aed1e81
+        uses: dacbd/create-issue-action@v1
+        with:
+          # Issue title
+          title: "test"
+          # Body content of issue
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
