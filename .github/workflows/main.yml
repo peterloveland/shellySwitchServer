@@ -31,7 +31,7 @@ jobs:
           # Github Token
           token: ${{ secrets.GITHUB_TOKEN }}
           # Issue title
-          title: "test"
+          title:  "${{ env.DAY_OF_WEEK  }} Test issue"
           # Body content of issue
 
       # Runs a single command using the runners shell
