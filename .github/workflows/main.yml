@@ -25,7 +25,8 @@ jobs:
       - uses: actions/checkout@v2
       
       - name: Create Github Issue
-        # You may pin to the exact commit or the version.
+        # Github Token
+        token: ${{ secrets.GITHUB_TOKEN }}
         # uses: dacbd/create-issue-action@734fc27cd95f8850ddbca891560233de7aed1e81
         uses: dacbd/create-issue-action@v1
         with:
