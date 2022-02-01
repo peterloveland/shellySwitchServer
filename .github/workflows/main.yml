@@ -31,7 +31,7 @@ jobs:
           # Github Token
           token: ${{ secrets.GITHUB_TOKEN }}
           # Issue title
-          title:  "${{ env.RUNNER_NAME  }} Test issue"
+          title:  "${{ env.GITHUB_ACTOR  }} Test issue"
           # Body content of issue
 
       # Runs a single command using the runners shell
