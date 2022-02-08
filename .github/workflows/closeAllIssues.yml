@@ -10,7 +10,7 @@ jobs:
     steps:
       - if: true
         name: Close Issue
-        uses: peter-evans/close-issue@v1
+        uses: peter-evans/close-issue@v1.0.3
         with:
           comment: |
             Issue title must start with 'ABC-'.
