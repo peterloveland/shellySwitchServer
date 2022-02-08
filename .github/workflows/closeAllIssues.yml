@@ -12,6 +12,7 @@ jobs:
         name: Close Issue
         uses: peter-evans/close-issue@v1.0.3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           comment: |
             Issue title must start with 'ABC-'.
             Auto-closing this issue.
