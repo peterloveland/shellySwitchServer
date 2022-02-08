@@ -1,16 +1,21 @@
-
+name: Close inactive issues
 on:
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-  issues:
-    types: [opened]
+
 jobs:
-  titlePrefixCheck:
+  close-issues:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
-      - if: true
-        name: Close Issue
-        uses: peter-evans/close-issue@v1.0.3
+      - uses: actions/stale@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          comment: "Issue title must start with 'ABC-'. Auto-closing this issue."
+          days-before-issue-stale: 1
+          days-before-issue-close: 2
+          stale-issue-label: "stale"
+          stale-issue-message: "This issue is stale because it has been open for 30 days with no activity."
+          close-issue-message: "This issue was closed because it has been inactive for 14 days since being marked as stale."
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
