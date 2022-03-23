@@ -1,2 +1,1 @@
-# MotionSensorRules
- 
+Motion sensor rules
